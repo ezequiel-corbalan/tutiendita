@@ -12,6 +12,7 @@ export * from "./domain/onboarding";
 export * from "./domain/options";
 export * from "./domain/order";
 export * from "./domain/schedule";
+export * from "./domain/calendar";
 export * from "./domain/payment-method";
 export * from "./domain/photo-storage";
 export * from "./domain/product";

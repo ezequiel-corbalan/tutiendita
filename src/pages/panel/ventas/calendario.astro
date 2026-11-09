@@ -1,0 +1,178 @@
+---
+import { env } from "cloudflare:workers";
+// Panel URLs stay in Spanish (/panel/ventas/calendario?mes=2026-11), like the rest.
+import { monthGrid } from "../../../packages/core/index";
+import { build } from "../../../container";
+import { LOCALES, texts } from "../../../i18n";
+import Panel from "../../../layouts/panel.astro";
+
+const container = build(env);
+// shortcut: loads every order to place the month's; add a date-range query when stores have hundreds of sales
+const [orders, token] = await Promise.all([container.orders.list(), container.calendar.token()]);
+const language = Astro.locals.language ?? "es";
+const locale = LOCALES[language];
+const t = texts(language).panelSales;
+
+// ?mes=AAAA-MM; anything else (or a year Date.UTC would read as 19xx) shows the current month.
+const asked = /^(\d{4})-(\d{2})$/.exec(Astro.url.searchParams.get("mes") ?? "");
+const valid = asked && Number(asked[1]) >= 2000 && Number(asked[2]) >= 1 && Number(asked[2]) <= 12;
+const now = new Date();
+const year = valid ? Number(asked[1]) : now.getUTCFullYear();
+const month = valid ? Number(asked[2]) : now.getUTCMonth() + 1;
+const monthParam = (y: number, m: number) => {
+  const d = new Date(Date.UTC(y, m - 1, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+};
+const weeks = monthGrid(year, month);
+// Dates are the buyer's local text: format them as UTC so they never shift.
+const utc = (date: string) => new Date(`${date}T00:00:00Z`);
+const title = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
+  utc(`${monthParam(year, month)}-01`),
+);
+const weekday = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+const fullDate = new Intl.DateTimeFormat(locale, { dateStyle: "full", timeZone: "UTC" });
+
+const byDay = new Map<string, typeof orders>();
+for (const o of orders) {
+  if (!o.scheduled || o.status === "cancelado") continue;
+  const day = o.scheduled.for.slice(0, 10);
+  byDay.set(day, [...(byDay.get(day) ?? []), o]);
+}
+for (const list of byDay.values()) list.sort((a, b) => (a.scheduled?.for ?? "").localeCompare(b.scheduled?.for ?? ""));
+const label = (o: (typeof orders)[number]) =>
+  `${o.scheduled?.for.slice(11)} ${o.buyer.name} · ${t.fulfillmentNames[o.scheduled?.fulfillment ?? "retiro"]}`;
+const monthDays = weeks.flat().filter((d) => d.inMonth && byDay.has(d.date));
+const feed = token ? new URL(`/api/calendar/${token}.ics`, Astro.url).href : "";
+---
+
+<Panel title={t.calendarTitle} section="sales">
+  <h1>{t.calendarTitle}</h1>
+  <nav class="order-filters" aria-label={t.title}>
+    <a href="/panel/ventas">{t.filterAll}</a>
+    <a href="/panel/ventas?adelantado">{t.filterScheduled}</a>
+    <a href="/panel/ventas/calendario" aria-current="page">{t.filterCalendar}</a>
+  </nav>
+
+  <div class="calendar__head">
+    <a class="button secondary" href={`/panel/ventas/calendario?mes=${monthParam(year, month - 1)}`} aria-label={t.prevMonth}>‹</a>
+    <h2 class="calendar__title">{title}</h2>
+    <a class="button secondary" href={`/panel/ventas/calendario?mes=${monthParam(year, month + 1)}`} aria-label={t.nextMonth}>›</a>
+  </div>
+
+  {/* Desktop: the month grid. Phones: the same orders as an agenda (CSS shows one or the other). */}
+  <table class="calendar">
+    <thead>
+      <tr>{weeks[0]?.map((d) => <th scope="col">{weekday.format(utc(d.date))}</th>)}</tr>
+    </thead>
+    <tbody>
+      {
+        weeks.map((week) => (
+          <tr>
+            {week.map((d) => (
+              <td class:list={["calendar__day", { "calendar__day--other": !d.inMonth }]} data-date={d.date}>
+                <span class="calendar__number" aria-hidden="true">
+                  {Number(d.date.slice(8))}
+                </span>
+                <span class="visually-hidden">{fullDate.format(utc(d.date))}</span>
+                {(byDay.get(d.date) ?? []).map((o) => (
+                  <a
+                    class:list={["calendar__order", { "calendar__order--done": o.status === "entregado" }]}
+                    href={`/panel/ventas?adelantado#pedido-${o.id}`}
+                  >
+                    {label(o)}
+                  </a>
+                ))}
+              </td>
+            ))}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+  <div class="calendar-agenda">
+    {
+      monthDays.length === 0 ? (
+        <p>{t.noneThisMonth}</p>
+      ) : (
+        <ol>
+          {monthDays.map((d) => (
+            <li>
+              <h3>{fullDate.format(utc(d.date))}</h3>
+              <ul>
+                {(byDay.get(d.date) ?? []).map((o) => (
+                  <li>
+                    <a href={`/panel/ventas?adelantado#pedido-${o.id}`}>{label(o)}</a>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ol>
+      )
+    }
+  </div>
+
+  <section class="card calendar__google" aria-labelledby="google" data-feed={feed}>
+    <h2 id="google">{t.googleTitle}</h2>
+    <p>{t.googleIntro}</p>
+    <div class="actions">
+      <button type="button" data-connect>{t.connect}</button>
+      <button type="button" class="secondary" data-copy-feed hidden={!feed}>{t.copyLink}</button>
+      <button type="button" class="secondary" data-rotate hidden={!feed}>{t.rotateLink}</button>
+    </div>
+    <p><small>{t.linkHelp}</small></p>
+    <p class="error" role="alert" data-error></p>
+  </section>
+</Panel>
+
+<script>
+  import { request, showError, t } from "../../../scripts/panel";
+
+  const box = document.querySelector<HTMLElement>("[data-feed]");
+  const error = box?.querySelector<HTMLElement>("[data-error]") ?? null;
+  // The feed's times carry the zone of the owner's browser (the shop's clock).
+  const newLink = async () =>
+    (
+      await request<{ url: string }>("POST", "/api/calendar/token", {
+        time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      })
+    ).url;
+  // Google subscribes from a webcal:// address; one click adds the calendar.
+  const google = (url: string) =>
+    `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(url.replace(/^https?:/, "webcal:"))}`;
+
+  box?.querySelector("[data-connect]")?.addEventListener("click", async () => {
+    // Opened before awaiting, so the browser doesn't block it as a pop-up.
+    const tab = window.open("", "_blank");
+    try {
+      const url = box.dataset.feed || (await newLink());
+      if (!tab) {
+        // Pop-up blocked: go to Google in this tab (no reload, it would cancel the navigation).
+        location.href = google(url);
+        return;
+      }
+      tab.location.href = google(url);
+      if (!box.dataset.feed) location.reload();
+    } catch (e) {
+      tab?.close();
+      showError(error, e);
+    }
+  });
+  const copy = box?.querySelector<HTMLButtonElement>("[data-copy-feed]");
+  copy?.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(box?.dataset.feed ?? "").catch(() => undefined);
+    copy.textContent = t().panelSales.copied;
+    setTimeout(() => {
+      copy.textContent = t().panelSales.copyLink;
+    }, 2000);
+  });
+  box?.querySelector("[data-rotate]")?.addEventListener("click", async () => {
+    if (!confirm(t().panelSales.confirmRotate)) return;
+    try {
+      await newLink();
+      location.reload();
+    } catch (e) {
+      showError(error, e);
+    }
+  });
+</script>

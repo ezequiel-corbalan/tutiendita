@@ -406,6 +406,23 @@ export const pt: Texts = {
   panelSales: {
     filterAll: "Todas",
     filterScheduled: "Com antecedência",
+    filterCalendar: "Calendário",
+    calendarSummary: (name: string, how: string) => `Pedido de ${name} — ${how}`,
+    addToGoogle: "Adicionar ao Google Agenda",
+    calendarTitle: "Calendário de pedidos com antecedência",
+    prevMonth: "Mês anterior",
+    nextMonth: "Próximo mês",
+    noneThisMonth: "Não há pedidos com antecedência neste mês.",
+    googleTitle: "Google Agenda",
+    googleIntro:
+      "Conecte uma vez e os pedidos com antecedência aparecem sozinhos na sua agenda. O Google traz os novos sozinho, mas pode levar algumas horas: para algo urgente, use “Adicionar ao Google Agenda” em cada pedido.",
+    connect: "Conectar ao Google Agenda",
+    copyLink: "Copiar link",
+    copied: "Copiado",
+    rotateLink: "Trocar link",
+    confirmRotate:
+      "O link anterior deixa de funcionar: apague essa agenda no Google (ela fica congelada) e conecte de novo. Continuar?",
+    linkHelp: "Também funciona com Apple Calendar ou Outlook: adicione uma agenda por URL e cole o link.",
     noneScheduled: "Ainda não há pedidos com antecedência.",
     scheduledFor: (when: string, how: string) => `Para ${when} · ${how}`,
     fulfillmentNames: { envio: "Entrega", retiro: "Retirada" },

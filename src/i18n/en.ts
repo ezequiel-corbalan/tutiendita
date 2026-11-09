@@ -403,6 +403,23 @@ export const en: Texts = {
   panelSales: {
     filterAll: "All",
     filterScheduled: "In advance",
+    filterCalendar: "Calendar",
+    calendarSummary: (name: string, how: string) => `Order from ${name} — ${how}`,
+    addToGoogle: "Add to Google Calendar",
+    calendarTitle: "Advance orders calendar",
+    prevMonth: "Previous month",
+    nextMonth: "Next month",
+    noneThisMonth: "No advance orders this month.",
+    googleTitle: "Google Calendar",
+    googleIntro:
+      "Connect it once and advance orders show up in your calendar by themselves. Google brings new ones on its own, but it can take a few hours: for something urgent, use “Add to Google Calendar” on each order.",
+    connect: "Connect Google Calendar",
+    copyLink: "Copy link",
+    copied: "Copied",
+    rotateLink: "Change link",
+    confirmRotate:
+      "The old link stops working: remove that calendar in Google (it stays frozen) and connect again. Go ahead?",
+    linkHelp: "It also works with Apple Calendar or Outlook: add a calendar from a URL and paste the link.",
     noneScheduled: "No advance orders yet.",
     scheduledFor: (when: string, how: string) => `For ${when} · ${how}`,
     fulfillmentNames: { envio: "Delivery", retiro: "Pickup" },

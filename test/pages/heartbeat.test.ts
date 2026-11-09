@@ -73,6 +73,6 @@ describe("heartbeat from the middleware (REGISTRY_URL is empty in tests: nothing
       const html = await (await request(path)).text();
       expect(html, path).toContain(`<meta name="generator" content="tutiendita ${version}"`);
     }
-    expect(version).toBe("0.16.0");
+    expect(version).toBe("0.17.0");
   });
 });
