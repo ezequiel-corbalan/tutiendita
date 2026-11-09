@@ -1,5 +1,5 @@
 /** Official repo new versions come from. A fork that publishes its own line changes this constant. */
-export const OFFICIAL_REPO = "ezequielcorbalan/tutiendita";
+export const OFFICIAL_REPO = "ezequiel-corbalan/tutiendita";
 
 /** Files in the merchant's repo that an update never overwrites: `wrangler.jsonc` holds their database IDs. */
 export const PRESERVED_FILES: readonly string[] = ["wrangler.jsonc"];

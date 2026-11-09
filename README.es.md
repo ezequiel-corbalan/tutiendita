@@ -6,7 +6,7 @@ Tu tienda online, funcionando en **tu propia cuenta de Cloudflare**, con un solo
 
 **Tienda online gratis y de código abierto para emprendedores y pymes**, en tu propia cuenta de Cloudflare (Workers y D1): catálogo con fotos (hasta 8 por producto y una por opción, con R2 conectado), categorías y variantes, carrito que manda el pedido por WhatsApp (cada pedido queda guardado en la sección Ventas del panel, donde lo marcás como pagado y entregado), pago por transferencia, páginas listas para Google (sitemap, Open Graph, schema.org Product) y un panel con passkeys. Sin comisiones por venta y tus datos son tuyos.
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ezequielcorbalan/tutiendita)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ezequiel-corbalan/tutiendita)
 
 ## Cómo se instala
 
