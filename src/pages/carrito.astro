@@ -126,7 +126,7 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
 </Store>
 
 <script>
-  import { currencyDecimals } from "../packages/core/index";
+  import { currencyDecimals, parseScheduledFor } from "../packages/core/index";
   import { languageFromLang, texts } from "../i18n";
   import { type CartItem, formatMoney, lineKey, MAX_QUANTITY, readCart, writeCart } from "../scripts/cart";
   import { scheduledLabel } from "../lib/scheduled-text";
@@ -291,7 +291,11 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
       for (const input of whenFields) input.required = isLater;
       if (addressInput) addressInput.required = isLater && data.get("fulfillment") === "envio";
     }
-    if (dateInput) dateInput.min = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in the buyer's zone
+    if (dateInput) {
+      // YYYY-MM-DD in the buyer's zone; the server takes up to a year ahead.
+      dateInput.min = new Date().toLocaleDateString("en-CA");
+      dateInput.max = new Date(Date.now() + 364 * 86_400_000).toLocaleDateString("en-CA");
+    }
     $("[data-when]")?.addEventListener("change", syncWhen);
     syncWhen();
 
@@ -336,6 +340,18 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
 
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
+      // The server would reject these, and the order is posted without waiting: stop here instead.
+      const asked = new FormData(form);
+      const when = scheduledOf(asked);
+      const problem =
+        when && !parseScheduledFor(when.for, new Date()).ok
+          ? t.invalidWhen
+          : when?.fulfillment === "envio" && String(asked.get("address") ?? "").trim() === ""
+            ? t.addressForDelivery
+            : "";
+      const errorBox = $("[data-error]");
+      if (errorBox) errorBox.textContent = problem;
+      if (problem) return;
       try {
         await priceCart();
         if (!quote) return;

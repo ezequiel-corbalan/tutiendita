@@ -10,7 +10,7 @@ import { formatMoney } from "../../scripts/cart";
 
 const container = build(env);
 // shortcut: loads every order to list them; add pagination when stores have hundreds of sales
-const all = await container.orders.list();
+const [all, advance] = await Promise.all([container.orders.list(), container.advanceOrders.isEnabled()]);
 // "Por adelantado": only advance orders, nearest first (public query string in Spanish like the URLs).
 const scheduledOnly = Astro.url.searchParams.has("adelantado");
 const orders = scheduledOnly ? upcomingScheduled(all) : all;
@@ -25,7 +25,7 @@ const day = (d: Date) => d.toLocaleDateString(locale, { timeZone: "UTC" });
   {Astro.url.searchParams.has("updated") && <p role="status">{t.updated}</p>}
   <p>{t.intro}</p>
   {
-    all.some((o) => o.scheduled) && (
+    (advance || all.some((o) => o.scheduled)) && (
       <nav class="order-filters" aria-label={t.title}>
         <a href="/panel/ventas" aria-current={scheduledOnly ? undefined : "page"}>{t.filterAll}</a>
         <a href="/panel/ventas?adelantado" aria-current={scheduledOnly ? "page" : undefined}>{t.filterScheduled}</a>

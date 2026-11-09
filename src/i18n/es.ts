@@ -41,6 +41,8 @@ export const es = {
     delivery: "Envío a domicilio",
     pickup: "Retiro en el local",
     msgScheduled: (when: string, how: string) => `Por adelantado: ${when} — ${how}`,
+    invalidWhen: "Elegí una fecha desde hoy y hasta dentro de un año.",
+    addressForDelivery: "Para el envío, escribí la dirección de entrega.",
     payWith: "¿Cómo vas a pagar?",
     payTransfer: "Transferencia",
     payAgree: "Lo arreglo por WhatsApp",

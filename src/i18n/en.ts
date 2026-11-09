@@ -37,6 +37,8 @@ export const en: Texts = {
     delivery: "Home delivery",
     pickup: "Pickup at the shop",
     msgScheduled: (when: string, how: string) => `In advance: ${when} — ${how}`,
+    invalidWhen: "Pick a date from today up to a year from now.",
+    addressForDelivery: "For a delivery, write the delivery address.",
     payWith: "How will you pay?",
     payTransfer: "Bank transfer",
     payAgree: "We'll sort it out on WhatsApp",

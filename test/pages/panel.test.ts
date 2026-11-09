@@ -817,6 +817,17 @@ describe("panel: sales", () => {
     expect(html).toMatch(/Para [^<]*30\D11[^<]*23:30 · Envío/);
     expect(html).toContain('id="pedido-soon"');
   });
+  it("the 'Por adelantado' filter shows as soon as the option is on, before the first advance order", async () => {
+    await seedStore();
+    const cookies = await startTestSession();
+    const before = await waitForPage("/panel/ventas", "Ventas", cookies);
+    expect(before.html).not.toContain('href="/panel/ventas?adelantado"');
+    await env.DB.prepare(
+      "INSERT INTO configuracion (clave, valor, actualizado_en) VALUES ('pedidos.anticipados', '1', '2026-11-09T10:00:00.000Z')",
+    ).run();
+    const { html } = await waitForPage("/panel/ventas", "Ventas", cookies);
+    expect(html).toContain('href="/panel/ventas?adelantado"');
+  });
   it("says so kindly when there are no sales yet", async () => {
     await seedStore();
     const { html } = await waitForPage("/panel/ventas", "Todavía no tenés ventas", await startTestSession());
