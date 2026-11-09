@@ -436,6 +436,38 @@ p.price {
   font-variant-numeric: tabular-nums;
 }
 
+/* Card controls: quantity and "Agregar" (or "Elegir") under the price, full card width. */
+.product__buy,
+.product__choose {
+  margin-top: 0.5rem;
+}
+
+.product__buy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.product__stepper {
+  display: flex;
+  flex: 1 1 100%;
+  justify-content: space-between;
+}
+
+.product__stepper .stepper__input[type="number"] {
+  flex: 1;
+  width: auto;
+  min-width: 2rem;
+}
+
+.product__add,
+.product__choose {
+  flex: 1 1 100%;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  width: 100%;
+}
+
 .price__from {
   color: var(--text-soft);
   font-size: 0.75rem;

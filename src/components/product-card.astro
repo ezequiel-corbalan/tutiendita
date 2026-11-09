@@ -1,13 +1,19 @@
 ---
-import { texts } from "../i18n";
+import { LOCALES, texts } from "../i18n";
 import type { ProductView } from "../lib/pages";
+import { MAX_QUANTITY } from "../scripts/cart";
 
-/** One catalog card: square photo (or an empty square), name and price, with "Desde" as a label of its own. */
+/**
+ * One catalog card: square photo (or an empty square), name and price, with "Desde" as a label of its own.
+ * Below, a quantity and "Agregar" (catalog script); a product with options links to its page to choose them.
+ */
 interface Props {
   product: ProductView;
 }
 const { product: p } = Astro.props;
-const t = texts(Astro.locals.language).store;
+const language = Astro.locals.language ?? "es";
+const all = texts(language);
+const t = all.store;
 ---
 
 <li class="product">
@@ -31,4 +37,49 @@ const t = texts(Astro.locals.language).store;
       {p.priceLabel}
     </span>
   </a>
+  {/* Controls stay outside the link: a button inside <a> is invalid HTML. */}
+  {
+    p.options.length > 0 ? (
+      <a class="button secondary product__choose" href={`/p/${p.slug}`}>{t.choose}</a>
+    ) : (
+      <div class="product__buy" data-buy>
+        <div class="stepper product__stepper">
+          <button type="button" class="stepper__button" data-step="-1" aria-label={all.cart.oneLess}>
+            −
+          </button>
+          <input
+            class="stepper__input"
+            type="number"
+            min="1"
+            max={MAX_QUANTITY}
+            value="1"
+            inputmode="numeric"
+            aria-label={t.quantityOf(p.name)}
+            data-quantity
+          />
+          <button type="button" class="stepper__button" data-step="1" aria-label={all.cart.oneMore}>
+            +
+          </button>
+        </div>
+        <button
+          type="button"
+          class="product__add"
+          data-add-to-cart
+          data-product-id={p.id}
+          data-slug={p.slug}
+          data-name={p.name}
+          data-amount={p.price.amount}
+          data-currency={p.price.currency}
+          data-image={p.images[0]?.url ?? ""}
+          data-locale={LOCALES[language]}
+          data-added-text={all.cart.addedShort}
+        >
+          <svg class="product-page__check" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M5 12l5 5L20 7" />
+          </svg>
+          <span data-add-text>{t.addShort}</span>
+        </button>
+      </div>
+    )
+  }
 </li>

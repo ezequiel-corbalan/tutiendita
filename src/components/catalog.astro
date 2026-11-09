@@ -92,6 +92,34 @@ const VISIBLE_ON_PHONES = 6;
 <HowToBuy />
 
 <script>
+  import { clampQuantity, flashAdded, wireStepper } from "../scripts/add-to-cart";
+  import { addToCart } from "../scripts/cart";
+
+  // Cards: quantity and "Agregar" without opening the product (only products without options have them).
+  for (const list of document.querySelectorAll<HTMLElement>(".catalog")) {
+    wireStepper(list);
+    list.addEventListener("click", (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-add-to-cart]");
+      if (!button) return;
+      const d = button.dataset;
+      const input = button.closest("[data-buy]")?.querySelector<HTMLInputElement>("[data-quantity]");
+      addToCart(
+        {
+          productId: d.productId ?? "",
+          slug: d.slug ?? "",
+          name: d.name ?? "",
+          // Preview only: the cart is priced again on the server.
+          amount: Number(d.amount),
+          currency: d.currency ?? "ARS",
+          image: d.image || null,
+        },
+        clampQuantity(input?.value),
+      );
+      if (input) input.value = "1";
+      flashAdded(button);
+    });
+  }
+
   // Phones: the tiles past the second row stay hidden until "Ver las N categorías" (without JavaScript, all show).
   const nav = document.querySelector<HTMLElement>("[data-categories]");
   const toggle = nav?.querySelector<HTMLButtonElement>("[data-categories-toggle]");

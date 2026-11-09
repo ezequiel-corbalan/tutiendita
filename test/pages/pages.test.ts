@@ -132,6 +132,22 @@ describe("GET /", () => {
       { "@type": "ListItem", position: 1, url: `${BASE}/p/mate-de-calabaza`, name: "Mate de calabaza" },
     ]);
   });
+
+  it("a card without options adds to the cart with a quantity; one with options links to choose them", async () => {
+    const plain = await seed(validCreation({ name: "Empanada de carne" }));
+    const options = JSON.stringify([{ name: "Gusto", values: [{ label: "Muzza", price_delta: 0 }] }]);
+    await seed(validCreation({ name: "Pizza grande", options }));
+
+    const html = await (await request("/")).text();
+    const card = (name: string) => html.split('<li class="product"').slice(1).find((c) => c.includes(name)) ?? "";
+    const empanada = card("Empanada de carne");
+    expect(empanada).toContain("data-add-to-cart");
+    expect(empanada).toContain(`data-product-id="${plain.id}"`);
+    expect(empanada).toContain('aria-label="Cantidad de Empanada de carne"');
+    const pizza = card("Pizza grande");
+    expect(pizza).not.toContain("data-add-to-cart");
+    expect(pizza).toMatch(/<a class="button secondary[^"]*" href="\/p\/pizza-grande"[^>]*>Elegir<\/a>/);
+  });
 });
 
 describe("catalog with categories (sample products)", () => {

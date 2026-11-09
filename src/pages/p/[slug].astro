@@ -117,7 +117,7 @@ const consultHref = (number: string, name: string, slug: string) =>
             </div>
           )}
           <p class="error" data-choose-all hidden role="alert">{v.chooseAll}</p>
-          <div class="product-page__buy">
+          <div class="product-page__buy" data-buy>
             <div class="stepper">
               <button type="button" class="stepper__button" data-step="-1" aria-label={t.cart.oneLess}>
                 −
@@ -199,7 +199,8 @@ const consultHref = (number: string, name: string, slug: string) =>
 }
 
 <script>
-  import { addToCart, formatMoney, MAX_QUANTITY } from "../../scripts/cart";
+  import { clampQuantity, flashAdded, wireStepper } from "../../scripts/add-to-cart";
+  import { addToCart, formatMoney } from "../../scripts/cart";
 
   const button = document.querySelector<HTMLButtonElement>("[data-add-to-cart]");
   const groups = Array.from(document.querySelectorAll<HTMLElement>("[data-variants] fieldset"));
@@ -260,28 +261,9 @@ const consultHref = (number: string, name: string, slug: string) =>
     if (e.persisted) applyRestored();
   });
 
-  // Quantity: 1 to MAX_QUANTITY; a blank or garbled number counts as 1.
-  const quantity = () => Math.max(1, Math.min(MAX_QUANTITY, Math.round(Number(quantityInput?.value)) || 1));
-  for (const step of document.querySelectorAll<HTMLButtonElement>("[data-step]")) {
-    step.addEventListener("click", () => {
-      if (!quantityInput) return;
-      quantityInput.value = String(Math.max(1, Math.min(MAX_QUANTITY, quantity() + Number(step.dataset.step))));
-    });
-  }
-
-  // "Agregado" with a check for a moment, then the button reads "Agregar al carrito" again.
-  const addText = button?.querySelector<HTMLElement>("[data-add-text]");
-  const addLabel = addText?.textContent ?? "";
-  let addedTimer: ReturnType<typeof setTimeout> | undefined;
-  function showAdded(): void {
-    if (addText) addText.textContent = button?.dataset.addedText ?? addLabel;
-    button?.classList.add("product-page__add--added");
-    clearTimeout(addedTimer);
-    addedTimer = setTimeout(() => {
-      if (addText) addText.textContent = addLabel;
-      button?.classList.remove("product-page__add--added");
-    }, 2000);
-  }
+  const quantity = () => clampQuantity(quantityInput?.value);
+  const buyBox = document.querySelector<HTMLElement>("[data-buy]");
+  if (buyBox) wireStepper(buyBox);
 
   button?.addEventListener("click", () => {
     const d = button.dataset;
@@ -312,7 +294,7 @@ const consultHref = (number: string, name: string, slug: string) =>
       quantity(),
     );
     if (quantityInput) quantityInput.value = "1";
-    showAdded();
+    flashAdded(button);
     document.querySelector<HTMLElement>("[data-added]")?.removeAttribute("hidden");
   });
 </script>
