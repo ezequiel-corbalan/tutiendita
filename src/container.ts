@@ -1,6 +1,7 @@
 import {
   type AccessDeps,
   ADVANCE_ORDERS,
+  CALENDAR_TOKEN,
   addCategory,
   advanceOnboarding,
   applyUpdate,
@@ -275,6 +276,16 @@ export function build(env: Env) {
       isEnabled: async () => (await settings.get(ADVANCE_ORDERS)) === "1",
       // "" counts as off: the settings table has no delete.
       setEnabled: (enabled: boolean) => settings.set(ADVANCE_ORDERS, enabled ? "1" : "", systemClock.now()),
+    },
+    calendar: {
+      token: async () => (await settings.get(CALENDAR_TOKEN)) || null,
+      /** A new secret (32 random bytes, base64url): the previous link stops working. */
+      rotate: async () => {
+        const bytes = crypto.getRandomValues(new Uint8Array(32));
+        const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        await settings.set(CALENDAR_TOKEN, token, systemClock.now());
+        return token;
+      },
     },
     heartbeat: {
       send: (origin: string) => sendHeartbeat({ store, registry }, origin, systemClock.now()),

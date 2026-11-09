@@ -4,8 +4,11 @@ export const PHOTOS_REQUESTED_AT = "fotos.pedido_en";
 export const BRAND_COLOR = "marca.color";
 /** "1" when the cart offers advance orders (date, time, delivery or pickup). */
 export const ADVANCE_ORDERS = "pedidos.anticipados";
+/** The secret of the calendar feed URL (`/api/calendar/<token>.ics`); "" or absent: no link yet. */
+export const CALENDAR_TOKEN = "calendario.token";
 export type SettingKey =
   | typeof PHOTOS_MODE
   | typeof PHOTOS_REQUESTED_AT
   | typeof BRAND_COLOR
-  | typeof ADVANCE_ORDERS;
+  | typeof ADVANCE_ORDERS
+  | typeof CALENDAR_TOKEN;
