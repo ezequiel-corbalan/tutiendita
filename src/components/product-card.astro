@@ -1,5 +1,5 @@
 ---
-import { LOCALES, texts } from "../i18n";
+import { texts } from "../i18n";
 import type { ProductView } from "../lib/pages";
 import { MAX_QUANTITY } from "../scripts/cart";
 
@@ -11,8 +11,7 @@ interface Props {
   product: ProductView;
 }
 const { product: p } = Astro.props;
-const language = Astro.locals.language ?? "es";
-const all = texts(language);
+const all = texts(Astro.locals.language ?? "es");
 const t = all.store;
 ---
 
@@ -71,7 +70,6 @@ const t = all.store;
           data-amount={p.price.amount}
           data-currency={p.price.currency}
           data-image={p.images[0]?.url ?? ""}
-          data-locale={LOCALES[language]}
           data-added-text={all.cart.addedShort}
         >
           <svg class="product-page__check" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
