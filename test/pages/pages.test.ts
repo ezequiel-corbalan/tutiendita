@@ -693,6 +693,19 @@ describe("cart", () => {
     });
   });
 
+  it("the product page's script also wires the related cards' Agregar (they live in a .catalog)", async () => {
+    const { slug } = await seed(validCreation({ name: "Torta de chocolate" }));
+    const html = await (await request(`/p/${slug}`)).text();
+    const sources = [...html.matchAll(/<script type="module" src="([^"]+)"/g)].map((m) => m[1] ?? "");
+    const fetchText = async (src: string) => (await request(src)).text();
+    const pageJs = (await Promise.all(sources.map(fetchText))).join("");
+    // Shared code lands in chunks the page script imports ("./add-to-cart.<hash>.js").
+    const chunks = [...pageJs.matchAll(/from"\.\/([^"]+\.js)"/g)].map((m) => `/_astro/${m[1]}`);
+    const js = pageJs + (await Promise.all(chunks.map(fetchText))).join("") + html;
+    expect(js).toContain(".catalog");
+    expect(js).toContain(".product-page__buy [data-add-to-cart]");
+  });
+
   it("the product page offers Add to cart and the header links to the cart", async () => {
     const { slug } = await seed(validCreation({ name: "Torta de chocolate" }));
     const html = await (await request(`/p/${slug}`)).text();

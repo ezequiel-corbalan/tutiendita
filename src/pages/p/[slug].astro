@@ -199,14 +199,15 @@ const consultHref = (number: string, name: string, slug: string) =>
 }
 
 <script>
-  import { clampQuantity, flashAdded, wireStepper } from "../../scripts/add-to-cart";
+  import { clampQuantity, flashAdded, wireCatalog, wireStepper } from "../../scripts/add-to-cart";
   import { addToCart, formatMoney } from "../../scripts/cart";
 
-  const button = document.querySelector<HTMLButtonElement>("[data-add-to-cart]");
+  // The product's own button, not the related cards' (those live in .catalog).
+  const button = document.querySelector<HTMLButtonElement>(".product-page__buy [data-add-to-cart]");
   const groups = Array.from(document.querySelectorAll<HTMLElement>("[data-variants] fieldset"));
   const price = document.querySelector<HTMLElement>("[data-price]");
   const chooseAll = document.querySelector<HTMLElement>("[data-choose-all]");
-  const quantityInput = document.querySelector<HTMLInputElement>("[data-quantity]");
+  const quantityInput = document.querySelector<HTMLInputElement>(".product-page__buy [data-quantity]");
   const initialPrice = price?.textContent ?? "";
 
   /** Per variant, the checked pill (one radio per value). */
@@ -261,8 +262,10 @@ const consultHref = (number: string, name: string, slug: string) =>
     if (e.persisted) applyRestored();
   });
 
+  // The "related" shelf is a catalog too: its cards add without opening the product.
+  wireCatalog();
   const quantity = () => clampQuantity(quantityInput?.value);
-  const buyBox = document.querySelector<HTMLElement>("[data-buy]");
+  const buyBox = document.querySelector<HTMLElement>(".product-page__buy");
   if (buyBox) wireStepper(buyBox);
 
   button?.addEventListener("click", () => {
