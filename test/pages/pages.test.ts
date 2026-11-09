@@ -747,6 +747,19 @@ describe("cart", () => {
     expect(js).toContain("keepalive");
   });
 
+  it("the cart asks '¿Para cuándo?' only when the store takes advance orders", async () => {
+    expect(await (await request("/carrito")).text()).not.toContain("¿Para cuándo?");
+    await env.DB.prepare(
+      "INSERT INTO configuracion (clave, valor, actualizado_en) VALUES ('pedidos.anticipados', '1', '2026-11-09T10:00:00.000Z')",
+    ).run();
+    const html = await (await request("/carrito")).text();
+    expect(html).toContain("¿Para cuándo?");
+    expect(html).toMatch(/<input[^>]*type="date"[^>]*name="date"/);
+    expect(html).toMatch(/<input[^>]*type="time"[^>]*name="time"/);
+    expect(html).toContain('value="envio"');
+    expect(html).toContain('value="retiro"');
+  });
+
   it("without WhatsApp configured the cart says it can't take orders", async () => {
     const html = await (await request("/carrito")).text();
     expect(html).toContain("todavía no configuró su WhatsApp");

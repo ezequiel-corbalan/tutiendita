@@ -1,15 +1,19 @@
 ---
 import { env } from "cloudflare:workers";
 // Panel URLs stay in Spanish (/panel/ventas), like the rest.
-import { transitions } from "../../packages/core/index";
+import { transitions, upcomingScheduled } from "../../packages/core/index";
 import { build } from "../../container";
 import { LOCALES, texts } from "../../i18n";
 import Panel from "../../layouts/panel.astro";
+import { scheduledLabel } from "../../lib/scheduled-text";
 import { formatMoney } from "../../scripts/cart";
 
 const container = build(env);
 // shortcut: loads every order to list them; add pagination when stores have hundreds of sales
-const orders = await container.orders.list();
+const all = await container.orders.list();
+// "Por adelantado": only advance orders, nearest first (public query string in Spanish like the URLs).
+const scheduledOnly = Astro.url.searchParams.has("adelantado");
+const orders = scheduledOnly ? upcomingScheduled(all) : all;
 const language = Astro.locals.language ?? "es";
 const locale = LOCALES[language];
 const t = texts(language).panelSales;
@@ -21,13 +25,28 @@ const day = (d: Date) => d.toLocaleDateString(locale, { timeZone: "UTC" });
   {Astro.url.searchParams.has("updated") && <p role="status">{t.updated}</p>}
   <p>{t.intro}</p>
   {
+    all.some((o) => o.scheduled) && (
+      <nav class="order-filters" aria-label={t.title}>
+        <a href="/panel/ventas" aria-current={scheduledOnly ? undefined : "page"}>{t.filterAll}</a>
+        <a href="/panel/ventas?adelantado" aria-current={scheduledOnly ? "page" : undefined}>{t.filterScheduled}</a>
+      </nav>
+    )
+  }
+  {
     orders.length === 0 ? (
-      <p>{t.none}</p>
+      <p>{scheduledOnly ? t.noneScheduled : t.none}</p>
     ) : (
       <ul class="order-list" data-locale={locale}>
         {orders.map((o) => (
-          <li class="card" data-order-id={o.id}>
+          <li class="card" id={`pedido-${o.id}`} data-order-id={o.id}>
             <h2>{o.buyer.name}</h2>
+            {o.scheduled && (
+              <p>
+                <span class="badge order__when">
+                  {t.scheduledFor(scheduledLabel(o.scheduled.for, locale), t.fulfillmentNames[o.scheduled.fulfillment])}
+                </span>
+              </p>
+            )}
             {o.buyer.address && (
               <p class="order__address">
                 <strong>{t.address}:</strong> {o.buyer.address}
@@ -106,7 +125,10 @@ const day = (d: Date) => d.toLocaleDateString(locale, { timeZone: "UTC" });
       busy(true);
       try {
         await request("PUT", `/api/orders/${card.dataset.orderId}/status`, { status: to });
-        location.assign("/panel/ventas?updated");
+        // Back to the same list (all or "Por adelantado"), with the confirmation.
+        const next = new URL(location.href);
+        next.searchParams.set("updated", "");
+        location.assign(next);
       } catch (e) {
         busy(false);
         showError(card.querySelector("[data-error]"), e);
