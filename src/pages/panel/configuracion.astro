@@ -8,11 +8,12 @@ import { texts } from "../../i18n";
 import Panel from "../../layouts/panel.astro";
 
 const container = build(env);
-const [store, color, domain, photos] = await Promise.all([
+const [store, color, domain, photos, advance] = await Promise.all([
   container.getStore(),
   container.identity.color(),
   container.domain.status(),
   container.photos.status(),
+  container.advanceOrders.isEnabled(),
 ]);
 const all = texts(Astro.locals.language);
 const t = all.settings;
@@ -285,6 +286,19 @@ const n = all.navPanel;
     </form>
   </section>
 
+  <section aria-labelledby="advance">
+    <h2 id="advance">{t.advanceTitle}</h2>
+    <p id="advance-intro">{t.advanceIntro}</p>
+    <form data-advance>
+      <label>
+        <input type="checkbox" name="enabled" checked={advance} aria-describedby="advance-intro" />
+        {t.advanceLabel}
+      </label>
+      <button type="submit">{t.saveAdvance}</button>
+      <p class="error" data-error role="alert"></p>
+    </form>
+  </section>
+
   <section aria-labelledby="heartbeat">
     <h2 id="heartbeat">{t.heartbeatTitle}</h2>
     <p id="heartbeat-intro">{t.heartbeatIntro}</p>
@@ -400,6 +414,7 @@ const n = all.navPanel;
   });
   saveAndReload("[data-language]", "/api/store/language", (d) => ({ language: String(d.get("language") ?? "") }));
   saveAndReload("[data-heartbeat]", "/api/store/heartbeat", (d) => ({ enabled: d.has("enabled") }));
+  saveAndReload("[data-advance]", "/api/store/advance-orders", (d) => ({ enabled: d.has("enabled") }));
 
   const error = document.querySelector("[data-domain-error]");
   const show = (selector: string, visible: boolean) =>

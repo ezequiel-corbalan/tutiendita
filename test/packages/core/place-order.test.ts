@@ -9,6 +9,7 @@ import {
   InMemoryImageStorage,
   InMemoryOrderRepository,
   InMemoryProductRepository,
+  InMemorySettingsRepository,
   SequentialIdGenerator,
 } from "./doubles/in-memory";
 
@@ -25,10 +26,12 @@ const png = {
 let orders: InMemoryOrderRepository;
 let create: ReturnType<typeof createProduct>;
 let place: ReturnType<typeof placeOrder>;
+let settings: InMemorySettingsRepository;
 
 beforeEach(() => {
   const repo = new InMemoryProductRepository();
   orders = new InMemoryOrderRepository();
+  settings = new InMemorySettingsRepository();
   create = createProduct({
     repo,
     categories: new InMemoryCategoryRepository(),
@@ -39,6 +42,7 @@ beforeEach(() => {
   place = placeOrder({
     repo,
     orders,
+    settings,
     ids: new SequentialIdGenerator(),
     clock: new FixedClock(new Date("2026-10-17T12:00:00Z")),
   });
@@ -99,6 +103,26 @@ describe("placeOrder", () => {
     const long = await place({ ...base, address: "a".repeat(201) });
     expect(!isOk(long) && long.error.code).toBe("INVALID_ORDER");
     expect(await orders.list()).toHaveLength(2);
+  });
+
+  it("an advance order needs the option on, and an address when it's a delivery", async () => {
+    const torta = await product("Torta", 2800000);
+    const base = { lines: [{ productId: torta.id, quantity: 1 }], buyerName: "Ana", note: "", paymentMethod: "whatsapp" as const };
+    const pickup = { for: "2026-11-14T18:00", fulfillment: "retiro" as const };
+    const off = await place({ ...base, scheduled: pickup });
+    expect(!isOk(off) && off.error.code).toBe("INVALID_ORDER");
+
+    await settings.set("pedidos.anticipados", "1", new Date());
+    const ok = await place({ ...base, scheduled: pickup });
+    expect(isOk(ok) && ok.value.scheduled).toEqual(pickup);
+    const noAddress = await place({ ...base, scheduled: { ...pickup, fulfillment: "envio" } });
+    expect(!isOk(noAddress) && noAddress.error.code).toBe("INVALID_ORDER");
+    const delivery = await place({ ...base, address: "San Martín 123", scheduled: { ...pickup, fulfillment: "envio" } });
+    expect(isOk(delivery) && delivery.value.scheduled?.fulfillment).toBe("envio");
+    const badDate = await place({ ...base, scheduled: { ...pickup, for: "2026-02-30T10:00" } });
+    expect(!isOk(badDate) && badDate.error.code).toBe("INVALID_ORDER");
+    const asap = await place(base);
+    expect(isOk(asap) && asap.value).not.toHaveProperty("scheduled");
   });
 
   it("a draft product or an empty cart fails like the quote does", async () => {

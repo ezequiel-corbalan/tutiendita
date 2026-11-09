@@ -350,7 +350,7 @@ describe("updates", () => {
     )?.[1];
     expect(status).toBeDefined();
     expect(res.headers.get("set-cookie")).toContain(`tiendita_github=${status}`);
-    expect(html).toContain("Tu tienda tiene la versión 0.15.0");
+    expect(html).toContain("Tu tienda tiene la versión 0.16.0");
     const manifest = JSON.parse(
       (/name="manifest" value="([^"]+)"/.exec(html)?.[1] ?? "")
         .replace(/&quot;/g, '"')
@@ -526,7 +526,7 @@ describe("panel bar, dashboard and footer", () => {
     expect(html).toContain("Próximamente");
     expect(html).toContain("Visitas a tu tienda");
     expect(html).toMatch(/<footer[^>]*class="panel-footer"/);
-    expect(html).toContain("tiendita 0.15.0");
+    expect(html).toContain("tiendita 0.16.0");
     expect(html).toContain("/panel/ventas");
     const products = await waitForPage("/panel/productos", "Productos", session);
     expect(products.html).toMatch(/<a href="\/panel\/productos" aria-current="page">/);
@@ -798,6 +798,36 @@ describe("panel: sales", () => {
     expect(html).toMatch(/<strong>Dirección:<\/strong>\s*San Martín 123, timbre B/);
     expect(html.slice(html.indexOf('data-order-id="b"'))).not.toContain("Dirección:");
   });
+  it("'Por adelantado' lists only advance orders, nearest first, with their date and how they're handed over", async () => {
+    await seedStore();
+    const cookies = await startTestSession();
+    const at = (id: string, when: string, fulfillment: "envio" | "retiro") => ({
+      ...sampleOrder(id, "nuevo", "2026-11-09T10:00:00Z"),
+      scheduled: { for: when, fulfillment },
+    });
+    await orders().insert(at("late", "2026-12-20T10:00", "retiro"));
+    await orders().insert(at("soon", "2026-11-30T23:30", "envio"));
+    await orders().insert(sampleOrder("now", "nuevo", "2026-11-09T11:00:00Z"));
+    const all = await waitForPage("/panel/ventas", "Ventas", cookies);
+    expect(all.html).toContain('href="/panel/ventas?adelantado"');
+    expect(all.html).toContain('data-order-id="now"');
+    const { html } = await waitForPage("/panel/ventas?adelantado", "Ventas", cookies);
+    expect(html).not.toContain('data-order-id="now"');
+    expect(html.indexOf('data-order-id="soon"')).toBeLessThan(html.indexOf('data-order-id="late"'));
+    expect(html).toMatch(/Para [^<]*30\D11[^<]*23:30 · Envío/);
+    expect(html).toContain('id="pedido-soon"');
+  });
+  it("the 'Por adelantado' filter shows as soon as the option is on, before the first advance order", async () => {
+    await seedStore();
+    const cookies = await startTestSession();
+    const before = await waitForPage("/panel/ventas", "Ventas", cookies);
+    expect(before.html).not.toContain('href="/panel/ventas?adelantado"');
+    await env.DB.prepare(
+      "INSERT INTO configuracion (clave, valor, actualizado_en) VALUES ('pedidos.anticipados', '1', '2026-11-09T10:00:00.000Z')",
+    ).run();
+    const { html } = await waitForPage("/panel/ventas", "Ventas", cookies);
+    expect(html).toContain('href="/panel/ventas?adelantado"');
+  });
   it("says so kindly when there are no sales yet", async () => {
     await seedStore();
     const { html } = await waitForPage("/panel/ventas", "Todavía no tenés ventas", await startTestSession());
@@ -812,5 +842,27 @@ describe("panel: sales", () => {
     const { html } = await waitForPage("/panel", "ventas por atender", cookies);
     expect(html).toMatch(/<span class="dashboard__number">2<\/span>\s*<span>ventas por atender/);
     expect(html).toContain('href="/panel/ventas"');
+  });
+  it("with advance orders on, the home counts the open ones for the next 7 days, and Configuración has the switch", async () => {
+    await seedStore();
+    const cookies = await startTestSession();
+    const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 16);
+    const at = (id: string, when: string, status: "nuevo" | "entregado" = "nuevo") => ({
+      ...sampleOrder(id, status, "2026-11-09T10:00:00Z"),
+      scheduled: { for: when, fulfillment: "retiro" as const },
+    });
+    await orders().insert(at("a", day(1)));
+    await orders().insert(at("b", day(3)));
+    await orders().insert(at("c", day(10)));
+    await orders().insert(at("d", day(2), "entregado"));
+    const before = await waitForPage("/panel", "ventas por atender", cookies);
+    expect(before.html).not.toContain("por adelantado, próximos 7 días");
+    const settings = await waitForPage("/panel/configuracion", "Pedidos por adelantado", cookies);
+    expect(settings.html).toContain("Tomar pedidos por adelantado");
+    await env.DB.prepare(
+      "INSERT INTO configuracion (clave, valor, actualizado_en) VALUES ('pedidos.anticipados', '1', '2026-11-09T10:00:00.000Z')",
+    ).run();
+    const { html } = await waitForPage("/panel", "por adelantado, próximos 7 días", cookies);
+    expect(html).toMatch(/<span class="dashboard__number">2<\/span>\s*<span>por adelantado, próximos 7 días/);
   });
 });

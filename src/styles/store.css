@@ -1587,6 +1587,36 @@ ul.order-list li + li {
   margin-top: 0;
 }
 
+/* Ventas: "Todas" / "Por adelantado" as pills; the current one filled. */
+.order-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+
+.order-filters a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.order-filters a[aria-current="page"] {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--brand-text);
+}
+
+.order__when {
+  background: var(--brand-soft);
+}
+
 /* Product page: breadcrumb (Inicio › category › product), variant pills, quantity stepper and the buy block. */
 .breadcrumb__list {
   display: flex;

@@ -1,18 +1,26 @@
 ---
 import { env } from "cloudflare:workers";
+import { isOpen } from "../../packages/core/index";
 import { build } from "../../container";
 import { texts } from "../../i18n";
 import Panel from "../../layouts/panel.astro";
 
 const container = build(env);
 // shortcut: loads every order to count them; add a COUNT query when stores have hundreds of sales
-const [store, all, orders] = await Promise.all([
+const [store, all, orders, advance] = await Promise.all([
   container.getStore(),
   container.listAllProducts(),
   container.orders.list(),
+  container.advanceOrders.isEnabled(),
 ]);
 // Product status is stored in D1: the literals stay in Spanish.
 const pending = orders.filter((o) => o.status === "nuevo" || o.status === "contactado").length;
+// Dates are the buyer's local text; comparing with UTC "now" can be a few hours off at the edges, fine for a count.
+const today = new Date().toISOString().slice(0, 10);
+const inAWeek = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+const upcoming = orders.filter(
+  (o) => o.scheduled && isOpen(o.status) && o.scheduled.for >= today && o.scheduled.for.slice(0, 10) <= inAWeek,
+).length;
 const published = all.filter((p) => p.status === "publicado").length;
 const t = texts(Astro.locals.language).panelHome;
 ---
@@ -44,6 +52,14 @@ const t = texts(Astro.locals.language).panelHome;
         <span class="dashboard__number">{pending}</span>
         <span>{t.pendingSales}</span>
       </li>
+      {
+        advance && (
+          <li class="card">
+            <span class="dashboard__number">{upcoming}</span>
+            <span>{t.upcomingScheduled}</span>
+          </li>
+        )
+      }
     </ul>
     {all.length === 0 && <p>{t.noProducts}</p>}
     <p>

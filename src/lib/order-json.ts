@@ -1,4 +1,4 @@
-import type { Order, OrderPaymentMethod, OrderStatus } from "../packages/core/index";
+import type { Order, OrderPaymentMethod, OrderStatus, ScheduledDelivery } from "../packages/core/index";
 
 /** JSON representation of an order for the owner's panel. */
 export type OrderJson = {
@@ -17,6 +17,8 @@ export type OrderJson = {
   }[];
   total: { amount: number; currency: string };
   status: OrderStatus;
+  /** Advance order (the buyer's local date and time as typed), or null: as soon as possible. */
+  scheduled: ScheduledDelivery | null;
   created_at: string;
   updated_at: string;
 };
@@ -37,6 +39,7 @@ export function toOrderJson(o: Order): OrderJson {
     })),
     total: o.total,
     status: o.status,
+    scheduled: o.scheduled ?? null,
     created_at: o.createdAt.toISOString(),
     updated_at: o.updatedAt.toISOString(),
   };

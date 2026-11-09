@@ -7,9 +7,10 @@ import { LOCALES, texts } from "../i18n";
 import Store from "../layouts/store.astro";
 
 const container = build(env);
-const [whatsapp, transfer] = await Promise.all([
+const [whatsapp, transfer, advance] = await Promise.all([
   container.getPaymentMethod("whatsapp"),
   container.getPaymentMethod("transferencia"),
+  container.advanceOrders.isEnabled(),
 ]);
 const language = Astro.locals.language ?? "es";
 const t = texts(language).cart;
@@ -45,6 +46,34 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
       />
       <label for="note">{t.note}</label>
       <textarea id="note" name="note" rows="2" maxlength="500" placeholder={t.notePlaceholder}></textarea>
+      {
+        advance && (
+          <fieldset data-when>
+            <legend>{t.when}</legend>
+            <label>
+              <input type="radio" name="when" value="now" checked /> {t.whenNow}
+            </label>
+            <label>
+              <input type="radio" name="when" value="later" /> {t.whenLater}
+            </label>
+            <div class="cart-when" data-later hidden>
+              <label for="when-date">{t.date}</label>
+              <input id="when-date" type="date" name="date" />
+              <label for="when-time">{t.time}</label>
+              <input id="when-time" type="time" name="time" />
+              <fieldset>
+                <legend>{t.howToGet}</legend>
+                <label>
+                  <input type="radio" name="fulfillment" value="retiro" /> {t.pickup}
+                </label>
+                <label>
+                  <input type="radio" name="fulfillment" value="envio" /> {t.delivery}
+                </label>
+              </fieldset>
+            </div>
+          </fieldset>
+        )
+      }
       <fieldset>
         <legend>{t.payWith}</legend>
         {
@@ -97,9 +126,10 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
 </Store>
 
 <script>
-  import { currencyDecimals } from "../packages/core/index";
+  import { currencyDecimals, parseScheduledFor } from "../packages/core/index";
   import { languageFromLang, texts } from "../i18n";
   import { type CartItem, formatMoney, lineKey, MAX_QUANTITY, readCart, writeCart } from "../scripts/cart";
+  import { scheduledLabel } from "../lib/scheduled-text";
   import { add, request, showError } from "../scripts/panel";
 
   const t = texts(languageFromLang(document.documentElement.lang)).cart;
@@ -128,6 +158,7 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
       address: string;
       note: string;
       payment: string;
+      scheduled?: { for: string; fulfillment: string };
     } | null = null;
     let sent = false;
 
@@ -247,6 +278,36 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
       if (total && quote) total.textContent = money(quote.total.amount, quote.total.currency);
     }
 
+    // "Por adelantado": its fields show (and are required) only while chosen; a delivery then needs the address.
+    const later = $("[data-later]");
+    const whenFields = Array.from(later?.querySelectorAll<HTMLInputElement>("input") ?? []);
+    const addressInput = $<HTMLInputElement>("#buyer-address");
+    const dateInput = $<HTMLInputElement>("#when-date");
+    function syncWhen(): void {
+      if (!form || !later) return;
+      const data = new FormData(form);
+      const isLater = data.get("when") === "later";
+      later.hidden = !isLater;
+      for (const input of whenFields) input.required = isLater;
+      if (addressInput) addressInput.required = isLater && data.get("fulfillment") === "envio";
+    }
+    if (dateInput) {
+      // YYYY-MM-DD in the buyer's zone; the server takes up to a year ahead.
+      dateInput.min = new Date().toLocaleDateString("en-CA");
+      dateInput.max = new Date(Date.now() + 364 * 86_400_000).toLocaleDateString("en-CA");
+    }
+    $("[data-when]")?.addEventListener("change", syncWhen);
+    syncWhen();
+
+    /** The advance order chosen in the form, or undefined: as soon as possible. */
+    function scheduledOf(data: FormData): { for: string; fulfillment: string } | undefined {
+      if (data.get("when") !== "later") return undefined;
+      return {
+        for: `${String(data.get("date") ?? "")}T${String(data.get("time") ?? "")}`,
+        fulfillment: String(data.get("fulfillment") ?? ""),
+      };
+    }
+
     function message(q: Quote, data: FormData, transfer: boolean): string {
       const lines = q.items.map((i) => {
         const each = money(i.unit_price.amount, i.unit_price.currency);
@@ -256,6 +317,7 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
       });
       const note = String(data.get("note") ?? "").trim();
       const address = String(data.get("address") ?? "").trim();
+      const scheduled = scheduledOf(data);
       return [
         root?.dataset.greeting ?? t.msgGreeting,
         ...lines,
@@ -263,6 +325,14 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
         "",
         `${t.msgName}: ${String(data.get("name") ?? "").trim()}`,
         ...(address ? [`${t.msgAddress}: ${address}`] : []),
+        ...(scheduled
+          ? [
+              t.msgScheduled(
+                scheduledLabel(scheduled.for, locale),
+                scheduled.fulfillment === "envio" ? t.delivery : t.pickup,
+              ),
+            ]
+          : []),
         `${t.msgPayment}: ${transfer ? t.msgTransfer : t.msgAgree}`,
         ...(note ? [`${t.msgNote}: ${note}`] : []),
       ].join("\n");
@@ -270,6 +340,18 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
 
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
+      // The server would reject these, and the order is posted without waiting: stop here instead.
+      const asked = new FormData(form);
+      const when = scheduledOf(asked);
+      const problem =
+        when && !parseScheduledFor(when.for, new Date()).ok
+          ? t.invalidWhen
+          : when?.fulfillment === "envio" && String(asked.get("address") ?? "").trim() === ""
+            ? t.addressForDelivery
+            : "";
+      const errorBox = $("[data-error]");
+      if (errorBox) errorBox.textContent = problem;
+      if (problem) return;
       try {
         await priceCart();
         if (!quote) return;
@@ -283,6 +365,7 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
           address: String(data.get("address") ?? "").trim(),
           note: String(data.get("note") ?? "").trim(),
           payment: transfer ? "transfer" : "agree",
+          ...(scheduledOf(data) ? { scheduled: scheduledOf(data) } : {}),
         };
         const text = message(quote, data, transfer);
         const send = $<HTMLAnchorElement>("[data-send]");

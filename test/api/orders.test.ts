@@ -61,6 +61,41 @@ describe("orders stored before the address existed", () => {
   });
 });
 
+describe("advance orders", () => {
+  const turnOn = (enabled: boolean, cookies: Record<string, string>) =>
+    send("PUT", "/api/store/advance-orders", { enabled }, { cookies });
+
+  it("the owner turns them on; only then the buyer can send a date, a time and delivery or pickup", async () => {
+    const a = (await (await create(validCreation({ name: "Torta" }))).json()) as ProductJson;
+    const items = [{ product_id: a.id, quantity: 1 }];
+    const scheduled = { for: "2027-01-15T18:00", fulfillment: "retiro" };
+    expect((await send("PUT", "/api/store/advance-orders", { enabled: true })).status).toBe(401);
+    expect((await post({ items, name: "Ana", payment: "agree", scheduled })).status).toBe(422);
+
+    const cookies = await startTestSession();
+    expect((await turnOn(true, cookies)).status).toBe(200);
+    expect((await post({ items, name: "Ana", payment: "agree", scheduled })).status).toBe(201);
+    expect(
+      (await post({ items, name: "Beto", payment: "agree", scheduled: { ...scheduled, fulfillment: "envio" } })).status,
+    ).toBe(422);
+    expect((await post({ items, name: "Caro", payment: "agree", scheduled: { ...scheduled, fulfillment: "moto" } })).status).toBe(422);
+    const listed = (await (await send("GET", "/api/orders", undefined, { cookies })).json()) as OrderJson[];
+    expect(listed.map((o) => o.scheduled)).toEqual([scheduled]);
+
+    expect((await turnOn(false, cookies)).status).toBe(200);
+    expect((await post({ items, name: "Ana", payment: "agree", scheduled })).status).toBe(422);
+  });
+
+  it("the repository keeps the date as typed and leaves orders for now without one", async () => {
+    const repo = createD1OrderRepository(env.DB);
+    const later = { ...sampleOrder("a", "nuevo", "2026-11-09T10:00:00Z"), scheduled: { for: "2026-11-30T23:30", fulfillment: "envio" as const } };
+    await repo.insert(later);
+    await repo.insert(sampleOrder("b", "nuevo", "2026-11-09T11:00:00Z"));
+    expect((await repo.findById("a"))?.scheduled).toEqual({ for: "2026-11-30T23:30", fulfillment: "envio" });
+    expect(await repo.findById("b")).not.toHaveProperty("scheduled");
+  });
+});
+
 describe("POST /api/orders/quote", () => {
   it("prices the cart on the server, without a session", async () => {
     const a = (await (
