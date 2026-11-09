@@ -417,7 +417,8 @@ export const en: Texts = {
     copyLink: "Copy link",
     copied: "Copied",
     rotateLink: "Change link",
-    confirmRotate: "The old link stops working and you'll need to connect the calendar again. Go ahead?",
+    confirmRotate:
+      "The old link stops working: remove that calendar in Google (it stays frozen) and connect again. Go ahead?",
     linkHelp: "It also works with Apple Calendar or Outlook: add a calendar from a URL and paste the link.",
     noneScheduled: "No advance orders yet.",
     scheduledFor: (when: string, how: string) => `For ${when} · ${how}`,

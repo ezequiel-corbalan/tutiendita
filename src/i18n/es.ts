@@ -431,7 +431,7 @@ export const es = {
     copied: "Copiado",
     rotateLink: "Cambiar enlace",
     confirmRotate:
-      "El enlace anterior deja de funcionar y vas a tener que volver a conectar el calendario. ¿Seguimos?",
+      "El enlace anterior deja de funcionar: borrá ese calendario en Google (queda congelado) y volvé a conectar. ¿Seguimos?",
     linkHelp: "También sirve para Apple Calendar u Outlook: agregá un calendario desde una URL y pegá el enlace.",
     noneScheduled: "Todavía no hay pedidos por adelantado.",
     scheduledFor: (when: string, how: string) => `Para ${when} · ${how}`,

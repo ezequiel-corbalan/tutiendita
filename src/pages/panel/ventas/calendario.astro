@@ -13,10 +13,12 @@ const language = Astro.locals.language ?? "es";
 const locale = LOCALES[language];
 const t = texts(language).panelSales;
 
+// ?mes=AAAA-MM; anything else (or a year Date.UTC would read as 19xx) shows the current month.
 const asked = /^(\d{4})-(\d{2})$/.exec(Astro.url.searchParams.get("mes") ?? "");
+const valid = asked && Number(asked[1]) >= 2000 && Number(asked[2]) >= 1 && Number(asked[2]) <= 12;
 const now = new Date();
-const year = asked ? Number(asked[1]) : now.getUTCFullYear();
-const month = asked && Number(asked[2]) >= 1 && Number(asked[2]) <= 12 ? Number(asked[2]) : now.getUTCMonth() + 1;
+const year = valid ? Number(asked[1]) : now.getUTCFullYear();
+const month = valid ? Number(asked[2]) : now.getUTCMonth() + 1;
 const monthParam = (y: number, m: number) => {
   const d = new Date(Date.UTC(y, m - 1, 1));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -68,9 +70,10 @@ const feed = token ? new URL(`/api/calendar/${token}.ics`, Astro.url).href : "";
           <tr>
             {week.map((d) => (
               <td class:list={["calendar__day", { "calendar__day--other": !d.inMonth }]} data-date={d.date}>
-                <span class="calendar__number" aria-label={fullDate.format(utc(d.date))}>
+                <span class="calendar__number" aria-hidden="true">
                   {Number(d.date.slice(8))}
                 </span>
+                <span class="visually-hidden">{fullDate.format(utc(d.date))}</span>
                 {(byDay.get(d.date) ?? []).map((o) => (
                   <a
                     class:list={["calendar__order", { "calendar__order--done": o.status === "entregado" }]}
@@ -127,7 +130,13 @@ const feed = token ? new URL(`/api/calendar/${token}.ics`, Astro.url).href : "";
 
   const box = document.querySelector<HTMLElement>("[data-feed]");
   const error = box?.querySelector<HTMLElement>("[data-error]") ?? null;
-  const newLink = async () => (await request<{ url: string }>("POST", "/api/calendar/token")).url;
+  // The feed's times carry the zone of the owner's browser (the shop's clock).
+  const newLink = async () =>
+    (
+      await request<{ url: string }>("POST", "/api/calendar/token", {
+        time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      })
+    ).url;
   // Google subscribes from a webcal:// address; one click adds the calendar.
   const google = (url: string) =>
     `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(url.replace(/^https?:/, "webcal:"))}`;
@@ -137,8 +146,12 @@ const feed = token ? new URL(`/api/calendar/${token}.ics`, Astro.url).href : "";
     const tab = window.open("", "_blank");
     try {
       const url = box.dataset.feed || (await newLink());
-      if (tab) tab.location.href = google(url);
-      else location.href = google(url);
+      if (!tab) {
+        // Pop-up blocked: go to Google in this tab (no reload, it would cancel the navigation).
+        location.href = google(url);
+        return;
+      }
+      tab.location.href = google(url);
       if (!box.dataset.feed) location.reload();
     } catch (e) {
       tab?.close();

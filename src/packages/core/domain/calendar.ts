@@ -35,7 +35,14 @@ export const EVENT_MINUTES = 30;
 /** Floating time ("20261114T180000", no Z, no TZID): the calendar shows it in its own zone, as typed. */
 export const floating = (text: string): string => `${text.replace(/[-:]/g, "")}00`;
 
-const escapeText = (s: string) => s.replace(/[\\;,]/g, (c) => `\\${c}`).replace(/\r?\n/g, "\\n");
+// Buyer text comes from a public form: any line break (a lone CR too) becomes \n and other control characters
+// go, so it can never start a property or an event of its own.
+const escapeText = (s: string) =>
+  s
+    .replace(/[\\;,]/g, (c) => `\\${c}`)
+    .replace(/\r\n|\r|\n/g, "\\n")
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping them is the point
+    .replace(/[\x00-\x08\x0b-\x1f\x7f]/g, "");
 
 /** Lines of at most 75 octets, continued with CRLF + space, never splitting a UTF-8 character. */
 function fold(line: string): string {
@@ -55,19 +62,32 @@ function fold(line: string): string {
   return parts.join("\r\n ");
 }
 
-export function toICS(events: readonly CalendarEvent[], now: Date): string {
+export type CalendarOptions = {
+  /** The calendar's name in Google (X-WR-CALNAME). */
+  readonly name?: string;
+  /**
+   * The shop's IANA zone. Google reads bare (floating) times in a subscribed feed as UTC, so with a zone the times
+   * carry it. shortcut: TZID without a VTIMEZONE block; Google, Apple and Outlook accept the IANA name alone.
+   */
+  readonly timeZone?: string;
+};
+
+export function toICS(events: readonly CalendarEvent[], now: Date, options: CalendarOptions = {}): string {
   const stamp = `${now.toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`;
+  const at = (text: string) => `${options.timeZone ? `;TZID=${options.timeZone}` : ""}:${floating(text)}`;
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//tutiendita//pedidos por adelantado//ES",
     "CALSCALE:GREGORIAN",
+    ...(options.name ? [`X-WR-CALNAME:${escapeText(options.name)}`] : []),
+    ...(options.timeZone ? [`X-WR-TIMEZONE:${options.timeZone}`] : []),
     ...events.flatMap((e) => [
       "BEGIN:VEVENT",
       `UID:${e.uid}`,
       `DTSTAMP:${stamp}`,
-      `DTSTART:${floating(e.start)}`,
-      `DTEND:${floating(addMinutes(e.start, EVENT_MINUTES))}`,
+      `DTSTART${at(e.start)}`,
+      `DTEND${at(addMinutes(e.start, EVENT_MINUTES))}`,
       `SUMMARY:${escapeText(e.summary)}`,
       `DESCRIPTION:${escapeText(e.description)}`,
       ...(e.location ? [`LOCATION:${escapeText(e.location)}`] : []),

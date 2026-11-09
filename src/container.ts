@@ -1,6 +1,7 @@
 import {
   type AccessDeps,
   ADVANCE_ORDERS,
+  CALENDAR_TIME_ZONE,
   CALENDAR_TOKEN,
   addCategory,
   advanceOnboarding,
@@ -279,6 +280,8 @@ export function build(env: Env) {
     },
     calendar: {
       token: async () => (await settings.get(CALENDAR_TOKEN)) || null,
+      timeZone: async () => (await settings.get(CALENDAR_TIME_ZONE)) || undefined,
+      setTimeZone: (zone: string) => settings.set(CALENDAR_TIME_ZONE, zone, systemClock.now()),
       /** A new secret (32 random bytes, base64url): the previous link stops working. */
       rotate: async () => {
         const bytes = crypto.getRandomValues(new Uint8Array(32));

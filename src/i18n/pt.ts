@@ -420,7 +420,8 @@ export const pt: Texts = {
     copyLink: "Copiar link",
     copied: "Copiado",
     rotateLink: "Trocar link",
-    confirmRotate: "O link anterior deixa de funcionar e você vai precisar conectar a agenda de novo. Continuar?",
+    confirmRotate:
+      "O link anterior deixa de funcionar: apague essa agenda no Google (ela fica congelada) e conecte de novo. Continuar?",
     linkHelp: "Também funciona com Apple Calendar ou Outlook: adicione uma agenda por URL e cole o link.",
     noneScheduled: "Ainda não há pedidos com antecedência.",
     scheduledFor: (when: string, how: string) => `Para ${when} · ${how}`,

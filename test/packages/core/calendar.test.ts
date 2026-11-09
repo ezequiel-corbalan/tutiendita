@@ -60,6 +60,23 @@ describe("toICS", () => {
     expect(ics).not.toContain("�");
   });
 
+  it("a lone CR or another control character can't start a new line or property", () => {
+    const ics = toICS([event({ summary: "Ana\rEND:VEVENT\rBEGIN:VEVENT", description: "a\u0000b\u001bc" })], now);
+    expect(ics).toContain("\r\nSUMMARY:Ana\\nEND:VEVENT\\nBEGIN:VEVENT\r\n");
+    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(2); // the real one and the escaped text
+    expect(ics.split("\r\n").filter((l) => l === "BEGIN:VEVENT")).toHaveLength(1);
+    expect(ics).toContain("\r\nDESCRIPTION:abc\r\n");
+    expect(ics).not.toMatch(/\r(?!\n)/);
+  });
+
+  it("with the shop's time zone, events carry it (Google reads bare times as UTC) and the calendar has a name", () => {
+    const ics = toICS([event()], now, { name: "La Rotisería, de Ana", timeZone: "America/Argentina/Buenos_Aires" });
+    expect(ics).toContain("\r\nX-WR-CALNAME:La Rotisería\\, de Ana\r\n");
+    expect(ics).toContain("\r\nX-WR-TIMEZONE:America/Argentina/Buenos_Aires\r\n");
+    expect(ics).toContain("\r\nDTSTART;TZID=America/Argentina/Buenos_Aires:20261114T180000\r\n");
+    expect(ics).toContain("\r\nDTEND;TZID=America/Argentina/Buenos_Aires:20261114T183000\r\n");
+  });
+
   it("an empty calendar is still valid", () => {
     expect(toICS([], now)).not.toContain("BEGIN:VEVENT");
   });

@@ -827,6 +827,7 @@ describe("panel: sales", () => {
     ).run();
     const { html } = await waitForPage("/panel/ventas", "Ventas", cookies);
     expect(html).toContain('href="/panel/ventas?adelantado"');
+  });
   it("the calendar shows each advance order on its day, moves by month and offers Google Calendar", async () => {
     await seedStore();
     await expectRedirect("/panel/ventas/calendario", "/panel/ingresar");

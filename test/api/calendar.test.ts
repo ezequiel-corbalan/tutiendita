@@ -16,8 +16,8 @@ const advanceOrders = (on: boolean) =>
 const soon = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 16);
 
 /** Creates (or changes) the secret link and returns the feed's path. */
-async function link(cookies: Record<string, string>): Promise<string> {
-  const res = await send("POST", "/api/calendar/token", undefined, { cookies });
+async function link(cookies: Record<string, string>, body?: unknown): Promise<string> {
+  const res = await send("POST", "/api/calendar/token", body, { cookies });
   expect(res.status).toBe(200);
   const { url } = (await res.json()) as { url: string };
   expect(url).toMatch(/^http:\/\/tiendita\.test\/api\/calendar\/[A-Za-z0-9_-]{43}\.ics$/);
@@ -50,6 +50,16 @@ describe("calendar feed (Google Calendar subscription)", () => {
     const ics = await res.text();
     expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
     expect(ics).toContain("UID:a@tiendita.test");
+  });
+
+  it("the zone of the owner's browser goes on every event, and the calendar takes the store's name", async () => {
+    await advanceOrders(true);
+    await createD1OrderRepository(env.DB).insert(at("a", "2027-01-15T18:00"));
+    const cookies = await startTestSession();
+    expect((await send("POST", "/api/calendar/token", { time_zone: "Mars/Olympus" }, { cookies })).status).toBe(422);
+    const ics = await (await call(await link(cookies, { time_zone: "America/Argentina/Buenos_Aires" }))).text();
+    expect(ics).toContain("DTSTART;TZID=America/Argentina/Buenos_Aires:20270115T180000");
+    expect(ics).toContain("X-WR-CALNAME:La tiendita de prueba");
   });
 
   it("changing the link kills the old one; with advance orders off the feed is empty", async () => {
