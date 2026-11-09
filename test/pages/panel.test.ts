@@ -350,7 +350,7 @@ describe("updates", () => {
     )?.[1];
     expect(status).toBeDefined();
     expect(res.headers.get("set-cookie")).toContain(`tiendita_github=${status}`);
-    expect(html).toContain("Tu tienda tiene la versión 0.16.0");
+    expect(html).toContain("Tu tienda tiene la versión 0.17.0");
     const manifest = JSON.parse(
       (/name="manifest" value="([^"]+)"/.exec(html)?.[1] ?? "")
         .replace(/&quot;/g, '"')
@@ -526,7 +526,7 @@ describe("panel bar, dashboard and footer", () => {
     expect(html).toContain("Próximamente");
     expect(html).toContain("Visitas a tu tienda");
     expect(html).toMatch(/<footer[^>]*class="panel-footer"/);
-    expect(html).toContain("tiendita 0.16.0");
+    expect(html).toContain("tiendita 0.17.0");
     expect(html).toContain("/panel/ventas");
     const products = await waitForPage("/panel/productos", "Productos", session);
     expect(products.html).toMatch(/<a href="\/panel\/productos" aria-current="page">/);
@@ -827,6 +827,23 @@ describe("panel: sales", () => {
     ).run();
     const { html } = await waitForPage("/panel/ventas", "Ventas", cookies);
     expect(html).toContain('href="/panel/ventas?adelantado"');
+  it("the calendar shows each advance order on its day, moves by month and offers Google Calendar", async () => {
+    await seedStore();
+    await expectRedirect("/panel/ventas/calendario", "/panel/ingresar");
+    const cookies = await startTestSession();
+    await orders().insert({
+      ...sampleOrder("a", "nuevo", "2026-11-09T10:00:00Z"),
+      scheduled: { for: "2026-11-14T18:00", fulfillment: "retiro" },
+    });
+    const sales = await waitForPage("/panel/ventas?adelantado", "Ventas", cookies);
+    expect(sales.html).toContain('href="/panel/ventas/calendario"');
+    expect(sales.html).toMatch(/href="https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE[^"]*dates=20261114T180000%2F20261114T183000/);
+    const { html } = await waitForPage("/panel/ventas/calendario?mes=2026-11", "Conectar con Google Calendar", cookies);
+    const day = html.slice(html.indexOf('data-date="2026-11-14"'));
+    expect(day.slice(0, day.indexOf("</td>"))).toContain("18:00 Ana · Retiro");
+    expect(html).toContain('href="/panel/ventas/calendario?mes=2026-10"');
+    expect(html).toContain('href="/panel/ventas/calendario?mes=2026-12"');
+    expect(html).toContain('href="/panel/ventas?adelantado#pedido-a"');
   });
   it("says so kindly when there are no sales yet", async () => {
     await seedStore();

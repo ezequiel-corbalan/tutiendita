@@ -5,6 +5,7 @@ import { transitions, upcomingScheduled } from "../../packages/core/index";
 import { build } from "../../container";
 import { LOCALES, texts } from "../../i18n";
 import Panel from "../../layouts/panel.astro";
+import { googleCalendarUrl, orderEvent } from "../../lib/order-calendar";
 import { scheduledLabel } from "../../lib/scheduled-text";
 import { formatMoney } from "../../scripts/cart";
 
@@ -29,6 +30,7 @@ const day = (d: Date) => d.toLocaleDateString(locale, { timeZone: "UTC" });
       <nav class="order-filters" aria-label={t.title}>
         <a href="/panel/ventas" aria-current={scheduledOnly ? undefined : "page"}>{t.filterAll}</a>
         <a href="/panel/ventas?adelantado" aria-current={scheduledOnly ? "page" : undefined}>{t.filterScheduled}</a>
+        <a href="/panel/ventas/calendario">{t.filterCalendar}</a>
       </nav>
     )
   }
@@ -44,7 +46,10 @@ const day = (d: Date) => d.toLocaleDateString(locale, { timeZone: "UTC" });
               <p>
                 <span class="badge order__when">
                   {t.scheduledFor(scheduledLabel(o.scheduled.for, locale), t.fulfillmentNames[o.scheduled.fulfillment])}
-                </span>
+                </span>{" "}
+                <a href={googleCalendarUrl(orderEvent(o, Astro.url.host, language))} target="_blank" rel="noopener">
+                  {t.addToGoogle}
+                </a>
               </p>
             )}
             {o.buyer.address && (
