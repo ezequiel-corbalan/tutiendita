@@ -1,5 +1,6 @@
 import {
   type AccessDeps,
+  ADVANCE_ORDERS,
   addCategory,
   advanceOnboarding,
   applyUpdate,
@@ -203,7 +204,7 @@ export function build(env: Env) {
     findProductById: (id: string) => repo.findById(id),
     quoteOrder: quoteOrder({ repo }),
     orders: {
-      place: placeOrder({ repo, orders: orderRepo, ids: ulidGenerator, clock: systemClock }),
+      place: placeOrder({ repo, orders: orderRepo, settings, ids: ulidGenerator, clock: systemClock }),
       list: listOrders({ orders: orderRepo }),
       changeStatus: changeOrderStatus({ orders: orderRepo, clock: systemClock }),
       limiter: deps.limiter,
@@ -269,6 +270,11 @@ export function build(env: Env) {
     identity: {
       update: updateStoreIdentity({ store, settings, images, clock: systemClock, maxImageSize }),
       color: getBrandColor({ settings }),
+    },
+    advanceOrders: {
+      isEnabled: async () => (await settings.get(ADVANCE_ORDERS)) === "1",
+      // "" counts as off: the settings table has no delete.
+      setEnabled: (enabled: boolean) => settings.set(ADVANCE_ORDERS, enabled ? "1" : "", systemClock.now()),
     },
     heartbeat: {
       send: (origin: string) => sendHeartbeat({ store, registry }, origin, systemClock.now()),

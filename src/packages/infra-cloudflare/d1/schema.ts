@@ -251,6 +251,9 @@ export const orders = sqliteTable(
     id: text("id").primaryKey(),
     buyerName: text("comprador_nombre").notNull(),
     buyerAddress: text("comprador_direccion").notNull().default(""),
+    // Advance orders: the buyer's local "YYYY-MM-DDTHH:MM" and 'envio' | 'retiro'; NULL = as soon as possible.
+    scheduledFor: text("entrega_para"),
+    fulfillment: text("entrega_tipo", { enum: ["envio", "retiro"] }),
     note: text("nota").notNull().default(""),
     paymentMethod: text("medio_de_pago", { enum: ["whatsapp", "transferencia"] }).notNull(),
     items: text("items").notNull(),

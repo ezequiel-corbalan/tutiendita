@@ -86,6 +86,11 @@ export const storeRoutes = new Hono<ApiEnv>()
     const r = await build(c.env).heartbeat.setEnabled(c.req.valid("json").enabled);
     if (!r.ok) return respondDomainError(c, r.error);
     return c.json({ enabled: r.value.heartbeatEnabled });
+  })
+  .put("/advance-orders", ownerOnly, validate("json", z.object({ enabled: z.boolean() })), async (c) => {
+    const { enabled } = c.req.valid("json");
+    await build(c.env).advanceOrders.setEnabled(enabled);
+    return c.json({ enabled });
   });
 
 export const paymentMethodRoutes = new Hono<ApiEnv>()

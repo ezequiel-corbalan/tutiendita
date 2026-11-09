@@ -1,6 +1,7 @@
 import { type DomainError, domainError } from "./errors";
 import { add, type Money, multiply } from "./money";
 import { err, ok, type Result } from "./result";
+import type { ScheduledDelivery } from "./schedule";
 
 // Stored in D1: values stay in Spanish (new, contacted, paid, delivered, cancelled).
 export const ORDER_STATUSES = ["nuevo", "contactado", "pagado", "entregado", "cancelado"] as const; // tuple: zod's z.enum needs it
@@ -30,6 +31,8 @@ export type Order = {
   readonly total: Money;
   readonly status: OrderStatus;
   readonly note: string;
+  /** Absent: as soon as possible. */
+  readonly scheduled?: ScheduledDelivery;
   readonly createdByAgent: boolean;
   readonly createdAt: Date;
   readonly updatedAt: Date;

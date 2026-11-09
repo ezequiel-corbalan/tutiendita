@@ -2,4 +2,10 @@
 export const PHOTOS_MODE = "fotos.modo";
 export const PHOTOS_REQUESTED_AT = "fotos.pedido_en";
 export const BRAND_COLOR = "marca.color";
-export type SettingKey = typeof PHOTOS_MODE | typeof PHOTOS_REQUESTED_AT | typeof BRAND_COLOR;
+/** "1" when the cart offers advance orders (date, time, delivery or pickup). */
+export const ADVANCE_ORDERS = "pedidos.anticipados";
+export type SettingKey =
+  | typeof PHOTOS_MODE
+  | typeof PHOTOS_REQUESTED_AT
+  | typeof BRAND_COLOR
+  | typeof ADVANCE_ORDERS;
