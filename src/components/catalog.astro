@@ -92,6 +92,10 @@ const VISIBLE_ON_PHONES = 6;
 <HowToBuy />
 
 <script>
+  import { wireCatalog } from "../scripts/add-to-cart";
+
+  wireCatalog();
+
   // Phones: the tiles past the second row stay hidden until "Ver las N categorías" (without JavaScript, all show).
   const nav = document.querySelector<HTMLElement>("[data-categories]");
   const toggle = nav?.querySelector<HTMLButtonElement>("[data-categories-toggle]");

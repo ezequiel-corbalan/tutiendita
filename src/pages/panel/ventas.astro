@@ -28,6 +28,11 @@ const day = (d: Date) => d.toLocaleDateString(locale, { timeZone: "UTC" });
         {orders.map((o) => (
           <li class="card" data-order-id={o.id}>
             <h2>{o.buyer.name}</h2>
+            {o.buyer.address && (
+              <p class="order__address">
+                <strong>{t.address}:</strong> {o.buyer.address}
+              </p>
+            )}
             <p>
               <time datetime={o.createdAt.toISOString()}>{day(o.createdAt)}</time>{" "}
               <span class="badge">

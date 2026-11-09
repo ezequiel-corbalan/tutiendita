@@ -18,7 +18,7 @@ async function seed(id: string, status: OrderStatus, createdAt: string) {
   const order: Order = {
     id,
     items: [],
-    buyer: { name: "Ana" },
+    buyer: { name: "Ana", address: "" },
     paymentMethod: "whatsapp",
     total: total.value,
     status,

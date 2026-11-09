@@ -4,6 +4,8 @@ import type { Order, OrderPaymentMethod, OrderStatus } from "../packages/core/in
 export type OrderJson = {
   id: string;
   buyer_name: string;
+  /** "" when the buyer left it blank. */
+  buyer_address: string;
   note: string;
   payment_method: OrderPaymentMethod;
   items: {
@@ -23,6 +25,7 @@ export function toOrderJson(o: Order): OrderJson {
   return {
     id: o.id,
     buyer_name: o.buyer.name,
+    buyer_address: o.buyer.address,
     note: o.note,
     payment_method: o.paymentMethod,
     items: o.items.map((i) => ({

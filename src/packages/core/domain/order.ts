@@ -24,7 +24,8 @@ export type OrderItem = {
 export type Order = {
   readonly id: string;
   readonly items: readonly OrderItem[];
-  readonly buyer: { readonly name: string };
+  /** `address` is "" when the buyer left it blank (pickup, or agreed on WhatsApp). */
+  readonly buyer: { readonly name: string; readonly address: string };
   readonly paymentMethod: OrderPaymentMethod;
   readonly total: Money;
   readonly status: OrderStatus;

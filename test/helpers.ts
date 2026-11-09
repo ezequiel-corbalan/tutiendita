@@ -204,7 +204,7 @@ export const sampleOrder = (id: string, status: OrderStatus, createdAt: string, 
   updatedAt: new Date(createdAt),
   note: "",
   createdByAgent: false,
-  buyer: { name: "Ana" },
+  buyer: { name: "Ana", address: "" },
   paymentMethod: "whatsapp",
   total: { amount: 100, currency: "ARS" },
   items: [

@@ -9,11 +9,14 @@ import { type CartLine, quoteOrder } from "./quote-order";
 
 export const MAX_BUYER_NAME = 80;
 export const MAX_ORDER_NOTE = 500;
+export const MAX_BUYER_ADDRESS = 200;
 
 export type PlaceOrderInput = {
   lines: readonly CartLine[];
   buyerName: string;
   note: string;
+  /** Where to deliver; optional (pickup, or agreed on WhatsApp). */
+  address?: string;
   paymentMethod: OrderPaymentMethod;
 };
 
@@ -23,9 +26,18 @@ export const placeOrder =
   async (input: PlaceOrderInput): Promise<Result<Order, DomainError>> => {
     const name = input.buyerName.trim();
     const note = input.note.trim();
-    if (name === "" || name.length > MAX_BUYER_NAME || note.length > MAX_ORDER_NOTE) {
+    const address = (input.address ?? "").trim();
+    if (
+      name === "" ||
+      name.length > MAX_BUYER_NAME ||
+      note.length > MAX_ORDER_NOTE ||
+      address.length > MAX_BUYER_ADDRESS
+    ) {
       return err(
-        domainError("INVALID_ORDER", "The order needs a buyer name (up to 80) and a note up to 500"),
+        domainError(
+          "INVALID_ORDER",
+          "The order needs a buyer name (up to 80), a note up to 500 and an address up to 200",
+        ),
       );
     }
     const quote = await quoteOrder({ repo: deps.repo })(input.lines);
@@ -34,7 +46,7 @@ export const placeOrder =
     const order: Order = {
       id: deps.ids.newId(),
       items: quote.value.items,
-      buyer: { name },
+      buyer: { name, address },
       paymentMethod: input.paymentMethod,
       total: quote.value.total,
       status: "nuevo",

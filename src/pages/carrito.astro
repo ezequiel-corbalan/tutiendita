@@ -35,6 +35,14 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
     <form data-checkout hidden>
       <label for="buyer-name">{t.yourName}</label>
       <input id="buyer-name" name="name" required maxlength="80" autocomplete="name" />
+      <label for="buyer-address">{t.address}</label>
+      <input
+        id="buyer-address"
+        name="address"
+        maxlength="200"
+        autocomplete="street-address"
+        placeholder={t.addressPlaceholder}
+      />
       <label for="note">{t.note}</label>
       <textarea id="note" name="note" rows="2" maxlength="500" placeholder={t.notePlaceholder}></textarea>
       <fieldset>
@@ -114,7 +122,13 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
     const form = $<HTMLFormElement>("[data-checkout]");
     let quote: Quote | null = null;
     // What is recorded when the buyer sends: the lines (with their selection), name, note and payment of the last submit.
-    let lastOrder: { items: ReturnType<typeof toLine>[]; name: string; note: string; payment: string } | null = null;
+    let lastOrder: {
+      items: ReturnType<typeof toLine>[];
+      name: string;
+      address: string;
+      note: string;
+      payment: string;
+    } | null = null;
     let sent = false;
 
     const toLine = (i: CartItem) => ({
@@ -241,12 +255,14 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
         return `• ${i.quantity} x ${name} (${each} ${t.msgEach}) = ${subtotal}`;
       });
       const note = String(data.get("note") ?? "").trim();
+      const address = String(data.get("address") ?? "").trim();
       return [
         root?.dataset.greeting ?? t.msgGreeting,
         ...lines,
         `${t.total}: ${money(q.total.amount, q.total.currency)}`,
         "",
         `${t.msgName}: ${String(data.get("name") ?? "").trim()}`,
+        ...(address ? [`${t.msgAddress}: ${address}`] : []),
         `${t.msgPayment}: ${transfer ? t.msgTransfer : t.msgAgree}`,
         ...(note ? [`${t.msgNote}: ${note}`] : []),
       ].join("\n");
@@ -264,6 +280,7 @@ const greeting = !wa || wa.template === WHATSAPP_TEMPLATE ? t.msgGreeting : wa.t
         lastOrder = {
           items: readCart().map(toLine),
           name: String(data.get("name") ?? "").trim(),
+          address: String(data.get("address") ?? "").trim(),
           note: String(data.get("note") ?? "").trim(),
           payment: transfer ? "transfer" : "agree",
         };

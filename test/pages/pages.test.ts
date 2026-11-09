@@ -132,6 +132,22 @@ describe("GET /", () => {
       { "@type": "ListItem", position: 1, url: `${BASE}/p/mate-de-calabaza`, name: "Mate de calabaza" },
     ]);
   });
+
+  it("a card without options adds to the cart with a quantity; one with options links to choose them", async () => {
+    const plain = await seed(validCreation({ name: "Empanada de carne" }));
+    const options = JSON.stringify([{ name: "Gusto", values: [{ label: "Muzza", price_delta: 0 }] }]);
+    await seed(validCreation({ name: "Pizza grande", options }));
+
+    const html = await (await request("/")).text();
+    const card = (name: string) => html.split('<li class="product"').slice(1).find((c) => c.includes(name)) ?? "";
+    const empanada = card("Empanada de carne");
+    expect(empanada).toContain("data-add-to-cart");
+    expect(empanada).toContain(`data-product-id="${plain.id}"`);
+    expect(empanada).toContain('aria-label="Cantidad de Empanada de carne"');
+    const pizza = card("Pizza grande");
+    expect(pizza).not.toContain("data-add-to-cart");
+    expect(pizza).toMatch(/<a class="button secondary[^"]*" href="\/p\/pizza-grande"[^>]*>Elegir<\/a>/);
+  });
 });
 
 describe("catalog with categories (sample products)", () => {
@@ -677,6 +693,19 @@ describe("cart", () => {
     });
   });
 
+  it("the product page's script also wires the related cards' Agregar (they live in a .catalog)", async () => {
+    const { slug } = await seed(validCreation({ name: "Torta de chocolate" }));
+    const html = await (await request(`/p/${slug}`)).text();
+    const sources = [...html.matchAll(/<script type="module" src="([^"]+)"/g)].map((m) => m[1] ?? "");
+    const fetchText = async (src: string) => (await request(src)).text();
+    const pageJs = (await Promise.all(sources.map(fetchText))).join("");
+    // Shared code lands in chunks the page script imports ("./add-to-cart.<hash>.js").
+    const chunks = [...pageJs.matchAll(/from"\.\/([^"]+\.js)"/g)].map((m) => `/_astro/${m[1]}`);
+    const js = pageJs + (await Promise.all(chunks.map(fetchText))).join("") + html;
+    expect(js).toContain(".catalog");
+    expect(js).toContain(".product-page__buy [data-add-to-cart]");
+  });
+
   it("the product page offers Add to cart and the header links to the cart", async () => {
     const { slug } = await seed(validCreation({ name: "Torta de chocolate" }));
     const html = await (await request(`/p/${slug}`)).text();
@@ -700,6 +729,13 @@ describe("cart", () => {
     expect(html).toContain("Ana Pérez");
     expect(html).toContain("mandá la foto del comprobante");
     expect(html).toContain('value="transfer"');
+    // The delivery address: optional, the browser can fill it in.
+    const address = html.match(/<input[^>]*id="buyer-address"[^>]*>/)?.[0] ?? "";
+    expect(address).toContain('name="address"');
+    expect(address).toContain('maxlength="200"');
+    expect(address).toContain('autocomplete="street-address"');
+    expect(address).not.toContain("required");
+    expect(html).toContain("Dirección de entrega (opcional)");
   });
 
   it("the cart's script posts the order to /api/orders with keepalive when the buyer sends it", async () => {

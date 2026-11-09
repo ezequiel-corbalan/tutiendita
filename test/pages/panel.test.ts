@@ -350,7 +350,7 @@ describe("updates", () => {
     )?.[1];
     expect(status).toBeDefined();
     expect(res.headers.get("set-cookie")).toContain(`tiendita_github=${status}`);
-    expect(html).toContain("Tu tienda tiene la versión 0.14.1");
+    expect(html).toContain("Tu tienda tiene la versión 0.15.0");
     const manifest = JSON.parse(
       (/name="manifest" value="([^"]+)"/.exec(html)?.[1] ?? "")
         .replace(/&quot;/g, '"')
@@ -526,7 +526,7 @@ describe("panel bar, dashboard and footer", () => {
     expect(html).toContain("Próximamente");
     expect(html).toContain("Visitas a tu tienda");
     expect(html).toMatch(/<footer[^>]*class="panel-footer"/);
-    expect(html).toContain("tiendita 0.14.1");
+    expect(html).toContain("tiendita 0.15.0");
     expect(html).toContain("/panel/ventas");
     const products = await waitForPage("/panel/productos", "Productos", session);
     expect(products.html).toMatch(/<a href="\/panel\/productos" aria-current="page">/);
@@ -787,6 +787,16 @@ describe("panel: sales", () => {
     expect(html.indexOf('data-order-id="a"')).toBeLessThan(html.indexOf('data-order-id="z"'));
     const delivered = html.slice(html.indexOf('data-order-id="z"'));
     expect(delivered).not.toContain("data-status=");
+  });
+  it("shows the delivery address when the buyer wrote one", async () => {
+    await seedStore();
+    const cookies = await startTestSession();
+    const withAddress = sampleOrder("a", "nuevo", "2026-10-17T10:00:00Z");
+    await orders().insert({ ...withAddress, buyer: { name: "Ana", address: "San Martín 123, timbre B" } });
+    await orders().insert(sampleOrder("b", "nuevo", "2026-10-17T09:00:00Z"));
+    const { html } = await waitForPage("/panel/ventas", "Ventas", cookies);
+    expect(html).toMatch(/<strong>Dirección:<\/strong>\s*San Martín 123, timbre B/);
+    expect(html.slice(html.indexOf('data-order-id="b"'))).not.toContain("Dirección:");
   });
   it("says so kindly when there are no sales yet", async () => {
     await seedStore();
