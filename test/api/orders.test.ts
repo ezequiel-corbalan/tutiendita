@@ -51,6 +51,16 @@ describe("D1 order repository", () => {
   });
 });
 
+describe("orders stored before the address existed", () => {
+  it("read back with an empty address", async () => {
+    await env.DB.prepare(
+      `INSERT INTO pedidos (id, comprador_nombre, nota, medio_de_pago, items, total_monto, total_moneda, estado, creado_en, actualizado_en)
+       VALUES ('old', 'Ana', '', 'whatsapp', '[]', 100, 'ARS', 'nuevo', '2026-10-01T10:00:00.000Z', '2026-10-01T10:00:00.000Z')`,
+    ).run();
+    expect((await createD1OrderRepository(env.DB).findById("old"))?.buyer).toEqual({ name: "Ana", address: "" });
+  });
+});
+
 describe("POST /api/orders/quote", () => {
   it("prices the cart on the server, without a session", async () => {
     const a = (await (
@@ -140,6 +150,19 @@ describe("POST /api/orders", () => {
       paymentMethod: "transferencia",
       note: "lo retiro el sábado",
       total: { amount: 5600000, currency: "ARS" },
+    });
+  });
+
+  it("stores the delivery address when the buyer writes one, and lists it for the owner", async () => {
+    const a = (await (await create(validCreation({ name: "Empanadas" }))).json()) as ProductJson;
+    const items = [{ product_id: a.id, quantity: 12 }];
+    expect((await post({ items, name: "Ana", payment: "agree", address: " San Martín 123 " })).status).toBe(201);
+    expect((await post({ items, name: "Beto", payment: "agree" })).status).toBe(201);
+    expect((await post({ items, name: "Caro", payment: "agree", address: "a".repeat(201) })).status).toBe(422);
+    const listed = (await (await send("GET", "/api/orders", undefined, { cookies: await startTestSession() })).json()) as OrderJson[];
+    expect(Object.fromEntries(listed.map((o) => [o.buyer_name, o.buyer_address]))).toEqual({
+      Ana: "San Martín 123",
+      Beto: "",
     });
   });
 

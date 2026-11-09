@@ -1,5 +1,6 @@
 import {
   domainError,
+  MAX_BUYER_ADDRESS,
   MAX_BUYER_NAME,
   MAX_CART_LINES,
   MAX_ORDER_NOTE,
@@ -39,6 +40,7 @@ const placeSchema = z.object({
   items: quoteSchema.shape.items,
   name: z.string().min(1).max(MAX_BUYER_NAME),
   note: z.string().max(MAX_ORDER_NOTE).default(""),
+  address: z.string().max(MAX_BUYER_ADDRESS).default(""),
   payment: z.enum(["transfer", "agree"]),
 });
 
@@ -72,6 +74,7 @@ export const orderRoutes = new Hono<ApiEnv>()
       })),
       buyerName: body.name,
       note: body.note,
+      address: body.address,
       // Stored values stay in Spanish.
       paymentMethod: body.payment === "transfer" ? "transferencia" : "whatsapp",
     });

@@ -88,6 +88,19 @@ describe("placeOrder", () => {
     expect(await orders.list()).toHaveLength(0);
   });
 
+  it("stores the delivery address trimmed, empty when missing, and rejects one over 200 characters", async () => {
+    const torta = await product("Torta", 2800000);
+    const lines = [{ productId: torta.id, quantity: 1 }];
+    const base = { lines, buyerName: "Ana", note: "", paymentMethod: "whatsapp" as const };
+    const withAddress = await place({ ...base, address: "  San Martín 123, timbre B " });
+    expect(isOk(withAddress) && withAddress.value.buyer).toEqual({ name: "Ana", address: "San Martín 123, timbre B" });
+    const without = await place(base);
+    expect(isOk(without) && without.value.buyer).toEqual({ name: "Ana", address: "" });
+    const long = await place({ ...base, address: "a".repeat(201) });
+    expect(!isOk(long) && long.error.code).toBe("INVALID_ORDER");
+    expect(await orders.list()).toHaveLength(2);
+  });
+
   it("a draft product or an empty cart fails like the quote does", async () => {
     const draft = await product("Borrador", 1000, false);
     const r = await place({

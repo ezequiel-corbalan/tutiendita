@@ -716,6 +716,13 @@ describe("cart", () => {
     expect(html).toContain("Ana Pérez");
     expect(html).toContain("mandá la foto del comprobante");
     expect(html).toContain('value="transfer"');
+    // The delivery address: optional, the browser can fill it in.
+    const address = html.match(/<input[^>]*id="buyer-address"[^>]*>/)?.[0] ?? "";
+    expect(address).toContain('name="address"');
+    expect(address).toContain('maxlength="200"');
+    expect(address).toContain('autocomplete="street-address"');
+    expect(address).not.toContain("required");
+    expect(html).toContain("Dirección de entrega (opcional)");
   });
 
   it("the cart's script posts the order to /api/orders with keepalive when the buyer sends it", async () => {

@@ -250,6 +250,7 @@ export const orders = sqliteTable(
   {
     id: text("id").primaryKey(),
     buyerName: text("comprador_nombre").notNull(),
+    buyerAddress: text("comprador_direccion").notNull().default(""),
     note: text("nota").notNull().default(""),
     paymentMethod: text("medio_de_pago", { enum: ["whatsapp", "transferencia"] }).notNull(),
     items: text("items").notNull(),

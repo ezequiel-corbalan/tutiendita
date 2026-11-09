@@ -437,9 +437,19 @@ p.price {
 }
 
 /* Card controls: quantity and "Agregar" (or "Elegir") under the price, full card width. */
+/* Cards in one row keep their controls on the same line, whatever the length of the name. */
+.catalog .product {
+  display: flex;
+  flex-direction: column;
+}
+
+.catalog .product__link {
+  padding-bottom: 0.5rem;
+}
+
 .product__buy,
 .product__choose {
-  margin-top: 0.5rem;
+  margin-top: auto;
 }
 
 .product__buy {
@@ -462,10 +472,13 @@ p.price {
 
 .product__add,
 .product__choose {
-  flex: 1 1 100%;
   gap: 0.4rem;
   min-height: 2.75rem;
   width: 100%;
+}
+
+.product__add {
+  flex: 1 1 100%;
 }
 
 .price__from {
