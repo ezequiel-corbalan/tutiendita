@@ -350,7 +350,7 @@ describe("updates", () => {
     )?.[1];
     expect(status).toBeDefined();
     expect(res.headers.get("set-cookie")).toContain(`tiendita_github=${status}`);
-    expect(html).toContain("Tu tienda tiene la versión 0.17.0");
+    expect(html).toContain("Tu tienda tiene la versión 0.17.1");
     const manifest = JSON.parse(
       (/name="manifest" value="([^"]+)"/.exec(html)?.[1] ?? "")
         .replace(/&quot;/g, '"')
@@ -526,7 +526,7 @@ describe("panel bar, dashboard and footer", () => {
     expect(html).toContain("Próximamente");
     expect(html).toContain("Visitas a tu tienda");
     expect(html).toMatch(/<footer[^>]*class="panel-footer"/);
-    expect(html).toContain("tiendita 0.17.0");
+    expect(html).toContain("tiendita 0.17.1");
     expect(html).toContain("/panel/ventas");
     const products = await waitForPage("/panel/productos", "Productos", session);
     expect(products.html).toMatch(/<a href="\/panel\/productos" aria-current="page">/);

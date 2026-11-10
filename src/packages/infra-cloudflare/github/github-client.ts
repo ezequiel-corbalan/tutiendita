@@ -191,6 +191,8 @@ export function createGithubClient(options: { fetch?: Fetch; clock?: () => Date 
       const entries: { path: string; mode: string; type: "blob"; sha?: string; content?: string }[] = [];
       let wranglerChanged = false;
       for (const a of official) {
+        // The official repo's CI isn't the store's, and GitHub refuses workflow files from an app without `workflows`.
+        if (a.path.startsWith(".github/")) continue;
         const sha = await blobSha(a.content);
         if (currentSha.get(a.path) === sha) continue;
         if (p.preserve.includes(a.path)) {

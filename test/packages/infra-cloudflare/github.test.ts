@@ -168,6 +168,8 @@ describe("GitHub client against a fake GitHub", () => {
               { path: "same.txt", text: "same" },
               { path: "wrangler.jsonc", text: "official" },
               { path: "src/new.ts", text: "export const v = 2;" },
+              // The official repo's own CI: the store's app can't write workflows, and doesn't need them.
+              { path: ".github/workflows/ci.yml", text: "on: push" },
             ]),
           ),
         );
@@ -216,7 +218,7 @@ describe("GitHub client against a fake GitHub", () => {
     });
   });
 
-  it("builds the PR only with what changed, without touching wrangler.jsonc or deleting the store's own files", async () => {
+  it("builds the PR only with what changed, without touching wrangler.jsonc, the official .github/ or the store's own files", async () => {
     const { client, connection, requests } = await build();
     const pr = await client.prepareUpdate(connection, {
       officialRepo: "oficial/tutiendita",
