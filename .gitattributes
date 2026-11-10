@@ -1,0 +1,2 @@
+# Updates copy the release tarball into each store's repo: the official CI stays out (a store's app can't write workflows).
+.github export-ignore
