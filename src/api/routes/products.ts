@@ -91,12 +91,12 @@ export const capFor = (maxSize: number) =>
         413,
       ),
   });
-const bodyCap = createMiddleware<ApiEnv>((c, next) =>
+export const bodyCap = createMiddleware<ApiEnv>((c, next) =>
   capFor(c.env.IMAGENES === undefined ? MAX_BASIC_BODY_SIZE : MAX_BODY_SIZE)(c, next),
 );
 
 /** Turns the photo fields into the gallery and the uploads of core; every file goes through `verifyImage`. */
-async function readPhotos(data: {
+export async function readPhotos(data: {
   image?: File | undefined;
   gallery?: PhotoRef[] | undefined;
   [file: `image_${number}`]: File | undefined;

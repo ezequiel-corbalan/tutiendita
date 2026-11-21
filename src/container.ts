@@ -1,6 +1,7 @@
 import {
   type AccessDeps,
   ADVANCE_ORDERS,
+  ASSISTANT_TOKEN,
   CALENDAR_TIME_ZONE,
   CALENDAR_TOKEN,
   addCategory,
@@ -191,6 +192,13 @@ export function build(env: Env) {
   const registryUrl = env.REGISTRY_URL ?? DEFAULT_REGISTRY_URL;
   const registry: StoreRegistry =
     registryUrl === "" ? { async announce() {} } : createRegistryClient(registryUrl);
+  /** A new secret (32 random bytes, base64url) under `key`: the previous link stops working. */
+  const rotateSecret = async (key: typeof CALENDAR_TOKEN | typeof ASSISTANT_TOKEN) => {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    await settings.set(key, token, systemClock.now());
+    return token;
+  };
   return {
     storeStatus: getStoreStatus({ access: accessRepo }),
     allowedOrigins: async () => (await accessRepo.allowedOrigins()).map((o) => o.origin),
@@ -282,13 +290,14 @@ export function build(env: Env) {
       token: async () => (await settings.get(CALENDAR_TOKEN)) || null,
       timeZone: async () => (await settings.get(CALENDAR_TIME_ZONE)) || undefined,
       setTimeZone: (zone: string) => settings.set(CALENDAR_TIME_ZONE, zone, systemClock.now()),
-      /** A new secret (32 random bytes, base64url): the previous link stops working. */
-      rotate: async () => {
-        const bytes = crypto.getRandomValues(new Uint8Array(32));
-        const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-        await settings.set(CALENDAR_TOKEN, token, systemClock.now());
-        return token;
-      },
+      rotate: () => rotateSecret(CALENDAR_TOKEN),
+    },
+    /** The AI assistant (MCP): same secret-link scheme as the calendar. */
+    assistant: {
+      token: async () => (await settings.get(ASSISTANT_TOKEN)) || null,
+      rotate: () => rotateSecret(ASSISTANT_TOKEN),
+      /** "" counts as off: the settings table has no delete. */
+      disconnect: () => settings.set(ASSISTANT_TOKEN, "", systemClock.now()),
     },
     heartbeat: {
       send: (origin: string) => sendHeartbeat({ store, registry }, origin, systemClock.now()),

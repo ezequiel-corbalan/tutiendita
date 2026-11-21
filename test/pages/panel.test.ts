@@ -1,4 +1,5 @@
 import { env, exports } from "cloudflare:workers";
+import { signTicket } from "../../src/lib/photo-ticket";
 import { createD1OrderRepository } from "../../src/packages/infra-cloudflare/index";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -350,7 +351,7 @@ describe("updates", () => {
     )?.[1];
     expect(status).toBeDefined();
     expect(res.headers.get("set-cookie")).toContain(`tiendita_github=${status}`);
-    expect(html).toContain("Tu tienda tiene la versión 0.17.1");
+    expect(html).toContain("Tu tienda tiene la versión 0.18.0");
     const manifest = JSON.parse(
       (/name="manifest" value="([^"]+)"/.exec(html)?.[1] ?? "")
         .replace(/&quot;/g, '"')
@@ -411,6 +412,7 @@ describe("settings", () => {
     expect(html).toContain('<nav class="settings-links" aria-label="Acceso y actualizaciones">');
     expect(html).toContain('<a class="card settings-links__item" href="/panel/acceso">');
     expect(html).toContain('<a class="card settings-links__item" href="/panel/actualizaciones">');
+    expect(html).toContain('<a class="card settings-links__item" href="/panel/asistente">');
     const access = await waitForPage("/panel/acceso", "<h1>", session);
     expect(access.html).toMatch(/<a href="\/panel\/configuracion" aria-current="page">/);
     expect(html).toContain("Guardar idioma");
@@ -470,6 +472,59 @@ describe("settings", () => {
     });
   });
 
+  it("the AI assistant page offers a link only to the owner, then shows it with the steps for Claude", async () => {
+    await seedStore();
+    await expectRedirect("/panel/asistente", "/panel/ingresar");
+    const session = await startTestSession();
+    const before = await waitForPage("/panel/asistente", "<h1>Tu asistente de IA</h1>", session);
+    expect(before.html).toContain("data-create");
+    expect(before.html).not.toContain("data-url-field");
+    expect(before.html).toContain('href="/mcp/skill.zip"');
+    await env.DB.prepare(
+      "INSERT INTO configuracion (clave, valor, actualizado_en) VALUES ('asistente.token', 'secreto-de-prueba', '2026-11-21T10:00:00.000Z')",
+    ).run();
+    const after = await waitForPage("/panel/asistente", "<h1>Tu asistente de IA</h1>", session);
+    expect(after.html).toMatch(/value="http:\/\/[^"]+\/mcp\/secreto-de-prueba"/);
+    expect(after.html).toContain("claude.ai/settings/connectors");
+    expect(after.html).toContain("data-disconnect");
+    // The ChatGPT prompt carries the MCP link and the guide.
+    expect(after.html).toMatch(/<textarea id="assistant-prompt"[^>]*>Sos el asistente de mi tienda online[^<]*\/mcp\/secreto-de-prueba\/guide\.md<\/textarea>/);
+  });
+
+  it("the confirmation page shows each change before applying it, and nothing with a wrong token", async () => {
+    await seedStore();
+    await env.DB.prepare(
+      "INSERT INTO configuracion (clave, valor, actualizado_en) VALUES ('asistente.token', 'secreto-de-prueba', '2026-11-21T10:00:00.000Z')",
+    ).run();
+    await orders().insert(sampleOrder("p1", "nuevo", "2026-11-09T10:00:00Z"));
+    const ok = await waitForPage("/confirmar/secreto-de-prueba?order=p1:pagado&delete=nope&x=1", "<h1>Confirmá los cambios</h1>");
+    expect(ok.html).toContain("nuevo → pagado");
+    expect(ok.html).toContain("se borra para siempre");
+    expect(ok.html).toContain("no existe");
+    expect(ok.html).toContain("x=1");
+    expect(ok.html).toContain("Confirmar los 2 cambios");
+    expect(ok.res.headers.get("referrer-policy")).toBe("no-referrer");
+    const bad = await request("/confirmar/otro?order=p1:pagado");
+    expect(bad.status).toBe(404);
+    expect(await bad.text()).not.toContain("Confirmar");
+  });
+
+  it("the photo upload page opens with a valid ticket and says so when it expired", async () => {
+    await seedStore();
+    await env.DB.prepare(
+      "INSERT INTO configuracion (clave, valor, actualizado_en) VALUES ('asistente.token', 'secreto-de-prueba', '2026-11-21T10:00:00.000Z')",
+    ).run();
+    const ticket = await signTicket("secreto-de-prueba", { logo: true }, new Date());
+    const ok = await waitForPage(`/subir-fotos/${ticket}`, "<h1>Subí tu logo</h1>");
+    expect(ok.html).toContain('type="file"');
+    expect(ok.res.headers.get("referrer-policy")).toBe("no-referrer");
+    const expired = await request(`/subir-fotos/${ticket}x`);
+    expect(expired.status).toBe(410);
+    const html = await expired.text();
+    expect(html).toContain("Este enlace ya no sirve");
+    expect(html).not.toContain('type="file"');
+  });
+
   it("explains the heartbeat and shows its checkbox checked, or not once the store opted out", async () => {
     await seedStore();
     const session = await startTestSession();
@@ -526,7 +581,7 @@ describe("panel bar, dashboard and footer", () => {
     expect(html).toContain("Próximamente");
     expect(html).toContain("Visitas a tu tienda");
     expect(html).toMatch(/<footer[^>]*class="panel-footer"/);
-    expect(html).toContain("tiendita 0.17.1");
+    expect(html).toContain("tiendita 0.18.0");
     expect(html).toContain("/panel/ventas");
     const products = await waitForPage("/panel/productos", "Productos", session);
     expect(products.html).toMatch(/<a href="\/panel\/productos" aria-current="page">/);

@@ -7,6 +7,7 @@ import { calendarRoutes } from "./routes/calendar";
 import { categoryRoutes } from "./routes/categories";
 import { domainRoutes, wellKnownRoutes } from "./routes/domain";
 import { imgRoutes } from "./routes/img";
+import { assistantRoutes, mcpRoutes } from "./routes/mcp";
 import { onboardingRoutes, paymentMethodRoutes, storeRoutes } from "./routes/onboarding";
 import { orderRoutes } from "./routes/orders";
 import { photoRoutes } from "./routes/photos";
@@ -32,8 +33,11 @@ export const api = new Hono<ApiEnv>()
   .route("/api/updates", updatesRoutes)
   .route("/api/domain", domainRoutes)
   .route("/api/photos", photoRoutes)
+  .route("/api/assistant", assistantRoutes)
   .route("/.well-known", wellKnownRoutes)
   .route("/img", imgRoutes)
+  // Outside /api: AI clients call it from their servers, with no Origin or session (the URL token is the key).
+  .route("/mcp", mcpRoutes)
   .notFound(notFound)
   .onError((cause, c) => internalError(c, cause));
 

@@ -10,6 +10,8 @@ export type ErrorCode =
   | "CATEGORY_NOT_FOUND"
   | "CATEGORY_HAS_PRODUCTS"
   | "INVALID_STATUS"
+  // Same code the API answers for invalid input (validation.ts); the AI tools return it too.
+  | "INVALID_INPUT"
   | "INVALID_CODE"
   | "STORE_ALREADY_CLAIMED"
   | "CHALLENGE_EXPIRED"
