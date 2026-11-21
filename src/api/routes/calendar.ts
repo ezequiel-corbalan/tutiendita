@@ -10,14 +10,14 @@ import { validate } from "../validation";
 const sha256 = async (s: string) => crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
 
 /** Constant time, whatever the lengths: compares the hashes. */
-async function sameSecret(a: string, b: string): Promise<boolean> {
+export async function sameSecret(a: string, b: string): Promise<boolean> {
   return crypto.subtle.timingSafeEqual(await sha256(a), await sha256(b));
 }
 
 const DAY = 86_400_000;
 
 /** An IANA zone the runtime knows ("America/Argentina/Buenos_Aires"). */
-const timeZone = z
+export const timeZone = z
   .string()
   .max(64)
   .refine((zone) => {

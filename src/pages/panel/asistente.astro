@@ -1,0 +1,147 @@
+---
+import { env } from "cloudflare:workers";
+// Panel URLs stay in Spanish (/panel/asistente), like the rest.
+import { build } from "../../container";
+import { texts } from "../../i18n";
+import Panel from "../../layouts/panel.astro";
+
+const token = await build(env).assistant.token();
+const t = texts(Astro.locals.language).assistant;
+const url = token ? new URL(`/mcp/${token}`, Astro.url).href : "";
+// AIs without a connector read this page: instructions plus the store's data right now.
+const prompt = url ? t.shortPrompt(`${url}/guide.md`) : "";
+---
+
+<Panel title={t.title} section="settings">
+  <p><a href="/panel/configuracion">← {texts(Astro.locals.language).settings.title}</a></p>
+  <h1>{t.title}</h1>
+  <p>{t.intro}</p>
+  <ul>
+    {t.examples.map((e) => <li>«{e}»</li>)}
+  </ul>
+
+  <section class="card" aria-labelledby="link" data-assistant={url}>
+    <h2 id="link">{t.linkTitle}</h2>
+    {
+      url ? (
+        <>
+          <label for="assistant-url">{t.linkLabel}</label>
+          <input id="assistant-url" type="text" value={url} readonly data-url-field />
+          <div class="actions">
+            <button type="button" data-copy>{t.copy}</button>
+            <button type="button" class="secondary" data-rotate>{t.rotate}</button>
+            <button type="button" class="secondary" data-disconnect>{t.disconnect}</button>
+          </div>
+          <p><small>{t.secret}</small></p>
+        </>
+      ) : (
+        <>
+          <p>{t.noLink}</p>
+          <div class="actions">
+            <button type="button" data-create>{t.create}</button>
+          </div>
+        </>
+      )
+    }
+    <p class="error" role="alert" data-error></p>
+    <p class="visually-hidden" aria-live="polite" data-status></p>
+  </section>
+
+  <section aria-labelledby="claude">
+    <h2 id="claude">{t.claudeTitle}</h2>
+    <ol>
+      <li>
+        {t.claudeStep1} <a href="https://claude.ai/settings/connectors" target="_blank" rel="noopener">claude.ai/settings/connectors</a>
+      </li>
+      {t.claudeSteps.map((s) => <li>{s}</li>)}
+    </ol>
+    <p><small>{t.claudeFree}</small></p>
+  </section>
+
+  <section aria-labelledby="chatgpt">
+    <h2 id="chatgpt">{t.chatgptTitle}</h2>
+    <p>{t.chatgptText}</p>
+    {
+      prompt ? (
+        <>
+          <label for="assistant-prompt">{t.promptLabel}</label>
+          <textarea id="assistant-prompt" rows="4" readonly data-prompt>{prompt}</textarea>
+          <div class="actions">
+            <button type="button" class="secondary" data-copy-prompt>{t.copyPrompt}</button>
+          </div>
+        </>
+      ) : (
+        <p><small>{t.promptNeedsLink}</small></p>
+      )
+    }
+  </section>
+
+  <section aria-labelledby="skill">
+    <h2 id="skill">{t.skillTitle}</h2>
+    <p>{t.skillText}</p>
+    <div class="actions">
+      <a class="button secondary" href="/mcp/skill.zip" download>{t.skillDownload}</a>
+    </div>
+  </section>
+
+  <section aria-labelledby="limits">
+    <h2 id="limits">{t.limitsTitle}</h2>
+    <p>{t.limitsText}</p>
+  </section>
+</Panel>
+
+<script>
+  import { request, showError, t } from "../../scripts/panel";
+
+  const box = document.querySelector<HTMLElement>("[data-assistant]");
+  const error = box?.querySelector<HTMLElement>("[data-error]") ?? null;
+  const status = box?.querySelector<HTMLElement>("[data-status]");
+
+  // The owner's browser zone is the shop's: "today" and "this week" for the assistant.
+  const newLinkBody = () => ({ time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+
+  const run = async (button: HTMLButtonElement, action: () => Promise<unknown>) => {
+    button.disabled = true;
+    try {
+      await action();
+      location.reload();
+    } catch (e) {
+      button.disabled = false;
+      showError(error, e);
+    }
+  };
+
+  box?.querySelector<HTMLButtonElement>("[data-create]")?.addEventListener("click", (e) =>
+    run(e.currentTarget as HTMLButtonElement, () => request("POST", "/api/assistant/token", newLinkBody())),
+  );
+  box?.querySelector<HTMLButtonElement>("[data-rotate]")?.addEventListener("click", (e) => {
+    if (!confirm(t().assistant.confirmRotate)) return;
+    void run(e.currentTarget as HTMLButtonElement, () => request("POST", "/api/assistant/token", newLinkBody()));
+  });
+  box?.querySelector<HTMLButtonElement>("[data-disconnect]")?.addEventListener("click", (e) => {
+    if (!confirm(t().assistant.confirmDisconnect)) return;
+    void run(e.currentTarget as HTMLButtonElement, () => request("DELETE", "/api/assistant/token"));
+  });
+
+  /** Copies the field's text; without a clipboard (http, old browser) it leaves the field selected to copy by hand. */
+  const copyFrom = async (button: HTMLButtonElement, field: HTMLInputElement | HTMLTextAreaElement | null, label: string) => {
+    try {
+      await navigator.clipboard.writeText(field?.value ?? "");
+    } catch {
+      field?.select();
+    }
+    button.textContent = t().assistant.copied;
+    if (status) status.textContent = t().assistant.copied;
+    setTimeout(() => {
+      button.textContent = label;
+    }, 2000);
+  };
+  const copyPrompt = document.querySelector<HTMLButtonElement>("[data-copy-prompt]");
+  copyPrompt?.addEventListener("click", () =>
+    copyFrom(copyPrompt, document.querySelector<HTMLTextAreaElement>("[data-prompt]"), t().assistant.copyPrompt),
+  );
+  const copy = box?.querySelector<HTMLButtonElement>("[data-copy]");
+  copy?.addEventListener("click", () =>
+    copyFrom(copy, box?.querySelector<HTMLInputElement>("[data-url-field]") ?? null, t().assistant.copy),
+  );
+</script>

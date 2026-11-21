@@ -1,3 +1,4 @@
+import type { LinkAction } from "../lib/action-link";
 import type { Texts } from "./es";
 
 /** Brazilian Portuguese texts (same keys as es.ts; see there how the keys ending in `Html` are used). */
@@ -248,6 +249,8 @@ export const pt: Texts = {
     linksLabel: "Acesso e atualizações",
     accessText: "Passkeys, chave de acesso e código de recuperação.",
     updatesText: "Novidades do tutiendita e atualização da sua loja.",
+    assistantTitle: "Assistente de IA",
+    assistantText: "Deixe o Claude ou o ChatGPT cadastrar produtos e acompanhar suas vendas por você.",
     title: "Configurações",
     identityTitle: "Sua loja",
     identityName: "Nome",
@@ -340,6 +343,91 @@ export const pt: Texts = {
       "Enquanto isso, sua loja continua funcionando com a versão anterior, mas não vai poder ser atualizada até você resolver isso ou voltar para fotos básicas.",
     photosActive: "ativas",
     photosProHelp: "As fotos ficam no armazenamento da Cloudflare (R2), com a melhor qualidade e sem teto.",
+  },
+  assistant: {
+    title: "Seu assistente de IA",
+    intro:
+      "Conecte sua loja ao Claude (o plano grátis serve) e peça as coisas como pediria a alguém que te ajuda. Ele faz por você, sem abrir o painel. Por exemplo:",
+    examples: [
+      "Cadastre estes produtos com os preços: brigadeiro 5, caixa com 12 por 55",
+      "Pause tudo que for de chocolate até segunda",
+      "Quais vendas ainda não respondi?",
+      "Aumente 10% o preço dos bolos",
+    ],
+    linkTitle: "1. Seu link",
+    noLink: "Primeiro crie o link que dá à IA acesso à sua loja.",
+    create: "Criar link",
+    linkLabel: "Link para sua IA",
+    copy: "Copiar link",
+    copied: "Copiado",
+    rotate: "Trocar link",
+    disconnect: "Desconectar",
+    secret:
+      "Este link é como uma chave da sua loja: cole só na sua IA e não passe para ninguém. Se vazar, toque em «Trocar link» e o anterior para de funcionar.",
+    confirmRotate: "O link anterior para de funcionar: você vai ter que colar o novo na sua IA. Continuar?",
+    confirmDisconnect: "Sua IA não vai mais conseguir entrar na sua loja. Desconectar?",
+    claudeTitle: "2. Conecte no Claude",
+    claudeStep1: "Abra o Claude, em Configurações → Conectores:",
+    claudeSteps: [
+      "Toque em «Adicionar conector personalizado».",
+      "Em nome coloque tutiendita e em URL cole seu link. Toque em «Adicionar».",
+      "Num chat novo, toque em «+», abra Conectores e ative tutiendita.",
+      "Teste com: «Como está minha loja?»",
+    ],
+    claudeFree:
+      "O plano grátis do Claude permite um conector personalizado: dá para a sua loja. Depois de adicionado, também funciona no app do Claude no celular.",
+    chatgptTitle: "Usa o ChatGPT ou outra IA?",
+    chatgptText:
+      "Copie esta mensagem e cole num chat novo. A IA abre o link, lê como trabalhar com sua loja e seus dados no momento (produtos, preços, pedidos) e responde coisas como «quantos pedidos tenho nesta semana?». Para mudar algo ela te monta um link: você toca, confere e confirma. Se ela também tiver o link acima adicionado como conector, faz as mudanças direto.",
+    promptLabel: "Mensagem para sua IA",
+    copyPrompt: "Copiar mensagem",
+    promptNeedsLink: "Crie seu link acima e a mensagem aparece aqui, pronta para copiar.",
+    shortPrompt: (url: string) =>
+      `Você é o assistente da minha loja online. Abra este link, leia tudo e siga as instruções durante toda a conversa: ${url}`,
+    skillTitle: "Skill para o Claude (opcional)",
+    skillText:
+      "Ensina o Claude a trabalhar melhor com sua loja: cadastrar produtos a partir de uma lista ou de uma foto do cardápio, escrever descrições e acompanhar suas vendas. Baixe e envie no Claude, em Configurações → Capacidades → Skills. Sem o skill, o conector funciona igual.",
+    skillDownload: "Baixar o skill",
+    limitsTitle: "O que ela não pode fazer",
+    limitsText:
+      "Por segurança, a IA não vê nem altera seus dados de pagamento (transferência e WhatsApp) nem seu acesso (passkeys e senha): isso só por este painel. Antes de apagar algo, ela pergunta.",
+  },
+  photoUpload: {
+    title: "Envie as fotos",
+    logoTitle: "Envie seu logo",
+    productFor: (name: string) => `As fotos vão para «${name}». Seu assistente de IA te passou este link.`,
+    logoFor: (name: string) => `O logo de ${name}. Melhor quadrado: aparece redondo ao lado do nome.`,
+    pickOne: "Escolha a foto",
+    pickMany: (max: number) => `Escolha as fotos (até ${max})`,
+    replacesPhoto: "Substitui a foto atual.",
+    replacesLogo: "Substitui o logo atual.",
+    upload: "Enviar",
+    uploading: "Enviando…",
+    tooMany: (max: number) => `Escolha até ${max} fotos.`,
+    full: "Este produto já tem todas as fotos que cabem. Tire alguma pelo painel para adicionar outra.",
+    done: "Pronto! Já estão na sua loja. Volte ao chat e diga à sua IA que terminou.",
+    expiredTitle: "Este link não funciona mais",
+    expired: "Venceu (dura 24 horas) ou seu assistente foi desconectado. Peça um novo à sua IA.",
+  },
+  confirmActions: {
+    title: "Confirme as mudanças",
+    intro: "Seu assistente de IA propõe estas mudanças. Confira e, se estiverem certas, confirme.",
+    nothing: "Este link não traz mudanças.",
+    notFound: "não existe",
+    ignored: "Isto eu não entendi e não será aplicado",
+    confirm: (n: number) => (n === 1 ? "Confirmar a mudança" : `Confirmar as ${n} mudanças`),
+    done: (applied: number, total: number) =>
+      applied === total
+        ? `Pronto! ${applied === 1 ? "A mudança foi aplicada" : `As ${applied} mudanças foram aplicadas`}. Volte ao chat.`
+        : `Foram aplicadas ${applied} de ${total} mudanças. Conte à sua IA para revisar as que faltam.`,
+    describe: (a: LinkAction, from: string | null) =>
+      a.type === "price"
+        ? `preço ${from ?? "?"} → ${a.price}`
+        : a.type === "delete"
+          ? "apagado para sempre"
+          : `${a.type === "order" ? "pedido " : ""}${from ?? "?"} → ${a.status}`,
+    invalidTitle: "Este link não funciona",
+    invalid: "O link do seu assistente mudou ou este link está incompleto. Peça à sua IA para montá-lo de novo.",
   },
   panelProducts: {
     title: "Produtos",
@@ -647,6 +735,7 @@ export const pt: Texts = {
       EMPTY_NAME: "Digite um nome (até 80 caracteres).",
       INVALID_SLUG: "O endereço do produto não é válido.",
       INVALID_IMAGE: "A foto precisa ser JPG, PNG ou WebP e não muito pesada. Tente outra.",
+      PHOTO_LINK_EXPIRED: "O link venceu. Peça um novo à sua IA.",
       TOO_MANY_IMAGES: "Um produto pode ter até 8 fotos.",
       IMAGE_QUOTA_REACHED:
         "Você chegou às 200 fotos do modo básico. Ative Fotos profissionais e sem limite em Configurações para continuar enviando.",

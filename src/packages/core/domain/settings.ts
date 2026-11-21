@@ -8,10 +8,13 @@ export const ADVANCE_ORDERS = "pedidos.anticipados";
 export const CALENDAR_TOKEN = "calendario.token";
 /** The shop's IANA time zone for the calendar feed, taken from the owner's browser when connecting. */
 export const CALENDAR_TIME_ZONE = "calendario.zona";
+/** The secret of the AI assistant's MCP URL (`/mcp/<token>`); "" or absent: no assistant connected. */
+export const ASSISTANT_TOKEN = "asistente.token";
 export type SettingKey =
   | typeof PHOTOS_MODE
   | typeof PHOTOS_REQUESTED_AT
   | typeof BRAND_COLOR
   | typeof ADVANCE_ORDERS
   | typeof CALENDAR_TOKEN
-  | typeof CALENDAR_TIME_ZONE;
+  | typeof CALENDAR_TIME_ZONE
+  | typeof ASSISTANT_TOKEN;

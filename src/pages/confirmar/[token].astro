@@ -1,0 +1,93 @@
+---
+import { env } from "cloudflare:workers";
+// Public URL of the store, it stays in Spanish (/confirmar/<token>?…): an AI without tools writes it for the owner.
+import { describeActions } from "../../api/mcp/guide";
+import { isAssistantToken } from "../../api/routes/mcp";
+import { build } from "../../container";
+import { texts } from "../../i18n";
+import Panel from "../../layouts/panel.astro";
+import { parseActions } from "../../lib/action-link";
+
+const container = build(env);
+const token = Astro.params.token ?? "";
+const valid = await isAssistantToken(container, token);
+const { actions, invalid } = parseActions(Astro.url.searchParams);
+const rows = valid ? await describeActions(container, actions) : [];
+const t = texts(Astro.locals.language).confirmActions;
+// The link carries the assistant's key: never cached, never sent on as a referrer.
+Astro.response.headers.set("cache-control", "no-store");
+Astro.response.headers.set("referrer-policy", "no-referrer");
+if (!valid) Astro.response.status = 404;
+---
+
+<Panel title={t.title}>
+  {
+    !valid ? (
+      <>
+        <h1>{t.invalidTitle}</h1>
+        <p>{t.invalid}</p>
+      </>
+    ) : (
+      <>
+        <h1>{t.title}</h1>
+        <p>{t.intro}</p>
+        {rows.length === 0 ? (
+          <p>{t.nothing}</p>
+        ) : (
+          <form class="card" data-confirm={token}>
+            <ul>
+              {rows.map((r) => (
+                <li>
+                  <strong>{r.name}</strong>: {t.describe(r.action, r.from)}
+                  {!r.found && <em> ({t.notFound})</em>}
+                </li>
+              ))}
+            </ul>
+            <div class="actions">
+              <button type="submit" data-submit>
+                {t.confirm(rows.length)}
+              </button>
+            </div>
+            <p class="error" role="alert" data-error />
+          </form>
+        )}
+        {invalid.length > 0 && (
+          <p>
+            <small>
+              {t.ignored}: {invalid.join(", ")}
+            </small>
+          </p>
+        )}
+        <div role="status" data-done hidden />
+      </>
+    )
+  }
+</Panel>
+
+<script>
+  import { request, showError, t } from "../../scripts/panel";
+
+  const form = document.querySelector<HTMLFormElement>("[data-confirm]");
+  const button = form?.querySelector<HTMLButtonElement>("[data-submit]");
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!button) return;
+    button.disabled = true;
+    try {
+      const r = await request<{ applied: number; results: { ok: boolean }[] }>(
+        "POST",
+        `/api/assistant/actions/${form.dataset.confirm}`,
+        { query: location.search },
+      );
+      form.hidden = true;
+      const done = document.querySelector<HTMLElement>("[data-done]");
+      if (done) {
+        done.textContent = t().confirmActions.done(r.applied, r.results.length);
+        done.hidden = false;
+      }
+    } catch (err) {
+      button.disabled = false;
+      showError(form.querySelector("[data-error]"), err);
+    }
+  });
+</script>

@@ -1,0 +1,100 @@
+---
+import { env } from "cloudflare:workers";
+// Public URL of the store, it stays in Spanish (/subir-fotos/<ticket>): the AI assistant hands it to the owner.
+import { describeTarget, ticketFrom } from "../../api/mcp/photos";
+import { MAX_UPLOADS } from "../../api/options-schema";
+import { build } from "../../container";
+import { texts } from "../../i18n";
+import Panel from "../../layouts/panel.astro";
+
+const container = build(env);
+const ticketText = Astro.params.ticket ?? "";
+const ticket = await ticketFrom(container, ticketText);
+const target = ticket && (await describeTarget(container, ticket.target));
+const t = texts(Astro.locals.language).photoUpload;
+const isLogo = ticket !== null && "logo" in ticket.target;
+// Basic storage: one photo per product, the new one replaces it. Professional: up to 8 in all.
+const max = !isLogo && container.hasBucket ? MAX_UPLOADS - (target?.photos ?? 0) : 1;
+const replaces = max === 1 && (target?.photos ?? 0) > 0;
+// The ticket is a key: never cached, never sent on as a referrer.
+Astro.response.headers.set("cache-control", "no-store");
+Astro.response.headers.set("referrer-policy", "no-referrer");
+if (!target) Astro.response.status = 410;
+---
+
+<Panel title={t.title}>
+  {
+    target ? (
+      <>
+        <h1>{isLogo ? t.logoTitle : t.title}</h1>
+        <p>{isLogo ? t.logoFor(target.name) : t.productFor(target.name)}</p>
+        {max <= 0 ? (
+          <p>{t.full}</p>
+        ) : (
+          <form
+            class="card"
+            data-upload={ticketText}
+            data-mode={container.hasBucket ? "professional" : "basic"}
+            data-max={max}
+          >
+            <label for="photos">{max > 1 ? t.pickMany(max) : t.pickOne}</label>
+            <input id="photos" name="photos" type="file" accept="image/*" multiple={max > 1} required />
+            {replaces && (
+              <p>
+                <small>{isLogo ? t.replacesLogo : t.replacesPhoto}</small>
+              </p>
+            )}
+            <div class="actions">
+              <button type="submit" data-submit>
+                {t.upload}
+              </button>
+            </div>
+            <p class="error" role="alert" data-error />
+          </form>
+        )}
+        <p role="status" data-done hidden>
+          {t.done}
+        </p>
+      </>
+    ) : (
+      <>
+        <h1>{t.expiredTitle}</h1>
+        <p>{t.expired}</p>
+      </>
+    )
+  }
+</Panel>
+
+<script>
+  import { shrinkImage } from "../../lib/shrink-image";
+  import { request, showError, t } from "../../scripts/panel";
+
+  const form = document.querySelector<HTMLFormElement>("[data-upload]");
+  const error = form?.querySelector<HTMLElement>("[data-error]") ?? null;
+  const button = form?.querySelector<HTMLButtonElement>("[data-submit]");
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const files = [...(form.querySelector<HTMLInputElement>("#photos")?.files ?? [])];
+    const max = Number(form.dataset.max);
+    if (files.length > max) {
+      showError(error, new Error(t().photoUpload.tooMany(max)));
+      return;
+    }
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = t().photoUpload.uploading;
+    try {
+      const body = new FormData();
+      const mode = form.dataset.mode === "professional" ? "professional" : "basic";
+      for (const [i, file] of files.entries()) body.set(`image_${i}`, await shrinkImage(file, mode));
+      await request("POST", `/api/assistant/photos/${form.dataset.upload}`, body);
+      form.hidden = true;
+      document.querySelector<HTMLElement>("[data-done]")?.removeAttribute("hidden");
+    } catch (err) {
+      button.disabled = false;
+      button.textContent = t().photoUpload.upload;
+      showError(error, err);
+    }
+  });
+</script>

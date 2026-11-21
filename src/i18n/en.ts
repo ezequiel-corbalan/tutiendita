@@ -1,3 +1,4 @@
+import type { LinkAction } from "../lib/action-link";
 import type { Texts } from "./es";
 
 /** English texts (same keys as es.ts; see there how the keys ending in `Html` are used). */
@@ -246,6 +247,8 @@ export const en: Texts = {
     linksLabel: "Access and updates",
     accessText: "Passkeys, access key and recovery code.",
     updatesText: "What is new in tutiendita and updating your store.",
+    assistantTitle: "AI assistant",
+    assistantText: "Let Claude or ChatGPT load products and follow up your sales for you.",
     title: "Settings",
     identityTitle: "Your store",
     identityName: "Name",
@@ -337,6 +340,91 @@ export const en: Texts = {
       "Meanwhile your store keeps running the previous version, but it can't be updated until you fix this or go back to basic photos.",
     photosActive: "on",
     photosProHelp: "Photos are kept in Cloudflare's storage (R2), at the best quality and with no cap.",
+  },
+  assistant: {
+    title: "Your AI assistant",
+    intro:
+      "Connect your store to Claude (the free plan works) and ask for things the way you'd ask someone who helps you. It does them for you, without opening the panel. For example:",
+    examples: [
+      "Add these products with their prices: cornstarch alfajor 1500, a dozen 15000",
+      "Pause everything with chocolate until Monday",
+      "Which sales haven't I answered yet?",
+      "Raise cake prices by 10%",
+    ],
+    linkTitle: "1. Your link",
+    noLink: "First create the link that gives the AI access to your store.",
+    create: "Create link",
+    linkLabel: "Link for your AI",
+    copy: "Copy link",
+    copied: "Copied",
+    rotate: "Change link",
+    disconnect: "Disconnect",
+    secret:
+      "This link is like a key to your store: paste it only into your AI and don't share it. If it leaks, tap «Change link» and the old one stops working.",
+    confirmRotate: "The old link stops working: you'll have to paste the new one into your AI. Continue?",
+    confirmDisconnect: "Your AI won't be able to reach your store anymore. Disconnect?",
+    claudeTitle: "2. Connect it in Claude",
+    claudeStep1: "Open Claude, in Settings → Connectors:",
+    claudeSteps: [
+      "Tap «Add custom connector».",
+      "Name it tutiendita and paste your link as the URL. Tap «Add».",
+      "In a new chat, tap «+», open Connectors and turn tutiendita on.",
+      "Try: «How is my store doing?»",
+    ],
+    claudeFree:
+      "Claude's free plan allows one custom connector: enough for your store. Once added, it also works in the Claude phone app.",
+    chatgptTitle: "Using ChatGPT or another AI?",
+    chatgptText:
+      "Copy this message and paste it into a new chat. The AI opens the link, reads how to work with your store and your data right now (products, prices, orders) and answers things like «how many orders do I have this week?». To change something it writes you a link: you tap it, check and confirm. If it also has the link above added as a connector, it makes the changes directly.",
+    promptLabel: "Message for your AI",
+    copyPrompt: "Copy message",
+    promptNeedsLink: "Create your link above and the message shows up here, ready to copy.",
+    shortPrompt: (url: string) =>
+      `You are the assistant of my online store. Open this link, read all of it and follow its instructions for the whole conversation: ${url}`,
+    skillTitle: "Skill for Claude (optional)",
+    skillText:
+      "It teaches Claude to work better with your store: loading products from a list or a photo of your menu, writing descriptions and following up your sales. Download it and upload it in Claude, in Settings → Capabilities → Skills. Without the skill, the connector works just the same.",
+    skillDownload: "Download the skill",
+    limitsTitle: "What it can't do",
+    limitsText:
+      "For safety, the AI can't see or change your payment details (bank transfer and WhatsApp) or your access (passkeys and password): only from this panel. It asks you before deleting anything.",
+  },
+  photoUpload: {
+    title: "Upload the photos",
+    logoTitle: "Upload your logo",
+    productFor: (name: string) => `The photos go to «${name}». Your AI assistant gave you this link.`,
+    logoFor: (name: string) => `The logo of ${name}. Square works best: it shows round next to the name.`,
+    pickOne: "Pick the photo",
+    pickMany: (max: number) => `Pick the photos (up to ${max})`,
+    replacesPhoto: "It replaces the current photo.",
+    replacesLogo: "It replaces your current logo.",
+    upload: "Upload",
+    uploading: "Uploading…",
+    tooMany: (max: number) => `Pick up to ${max} photos.`,
+    full: "This product already has all the photos it can take. Remove one from the panel to add another.",
+    done: "Done! They're in your store. Go back to the chat and tell your AI you're finished.",
+    expiredTitle: "This link doesn't work anymore",
+    expired: "It expired (it lasts 24 hours) or your assistant was disconnected. Ask your AI for a new one.",
+  },
+  confirmActions: {
+    title: "Confirm the changes",
+    intro: "Your AI assistant suggests these changes. Check them and, if they're right, confirm them.",
+    nothing: "This link has no changes.",
+    notFound: "doesn't exist",
+    ignored: "I didn't understand this and it won't be applied",
+    confirm: (n: number) => (n === 1 ? "Confirm the change" : `Confirm the ${n} changes`),
+    done: (applied: number, total: number) =>
+      applied === total
+        ? `Done! ${applied === 1 ? "The change was" : `The ${applied} changes were`} applied. Go back to the chat.`
+        : `${applied} of ${total} changes were applied. Tell your AI so it checks the rest.`,
+    describe: (a: LinkAction, from: string | null) =>
+      a.type === "price"
+        ? `price ${from ?? "?"} → ${a.price}`
+        : a.type === "delete"
+          ? "deleted for good"
+          : `${a.type === "order" ? "order " : ""}${from ?? "?"} → ${a.status}`,
+    invalidTitle: "This link doesn't work",
+    invalid: "Your assistant's link changed or this link is incomplete. Ask your AI to write it again.",
   },
   panelProducts: {
     title: "Products",
@@ -645,6 +733,7 @@ export const en: Texts = {
       EMPTY_NAME: "Type a name (up to 80 characters).",
       INVALID_SLUG: "The product address isn't valid.",
       INVALID_IMAGE: "The photo has to be a JPG, PNG or WebP and not too large. Try another one.",
+      PHOTO_LINK_EXPIRED: "The link expired. Ask your AI for a new one.",
       TOO_MANY_IMAGES: "A product can have up to 8 photos.",
       IMAGE_QUOTA_REACHED:
         "You reached the 200 photos of basic mode. Turn on Professional photos, no limit in Settings to keep uploading.",
